@@ -1,18 +1,22 @@
-"use client";
+﻿"use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { Product, ProductFilterOptions } from "@/types/product";
+import { Product } from "@/types/product";
 import { Category } from "@/types/category";
-import { StoreSettings } from "@/types/settings";
+import { StoreSettings, Banner, Testimonial } from "@/types/settings";
 import { productService } from "@/services/productService";
 import { categoryService } from "@/services/categoryService";
 import { settingsService } from "@/services/settingsService";
+import { bannerService } from "@/services/bannerService";
+import { testimonialService } from "@/services/testimonialService";
 import { LocalStore } from "@/services/storage";
 
 interface StoreContextType {
   products: Product[];
   categories: Category[];
   settings: StoreSettings;
+  banners: Banner[];
+  testimonials: Testimonial[];
   isLoading: boolean;
   refreshData: () => Promise<void>;
   getProductBySlug: (slug: string) => Product | undefined;
@@ -32,6 +36,8 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [settings, setSettings] = useState<StoreSettings>({
     storeName: "Mole Store",
     tagline: "Pusat Akun Digital Legal, Murah & Bergaransi",
@@ -43,14 +49,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const loadAll = useCallback(async () => {
     try {
-      const [p, c, s] = await Promise.all([
+      const [p, c, s, b, t] = await Promise.all([
         productService.getAll(),
         categoryService.getAll(),
         settingsService.getSettings(),
+        bannerService.getActive(),
+        testimonialService.getActive(),
       ]);
       setProducts(p);
       setCategories(c);
       setSettings(s);
+      setBanners(b);
+      setTestimonials(t);
     } catch (err) {
       console.error("Error loading store data", err);
     } finally {
@@ -149,6 +159,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         products,
         categories,
         settings,
+        banners,
+        testimonials,
         isLoading,
         refreshData: loadAll,
         getProductBySlug,

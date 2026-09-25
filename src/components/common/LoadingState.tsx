@@ -1,5 +1,28 @@
-import React from "react";
+﻿import React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2 } from "lucide-react";
+
+export function LoadingSpinner({
+  size = "default",
+  text,
+}: {
+  size?: "sm" | "default" | "md" | "lg";
+  text?: string;
+}) {
+  const sizeClasses = {
+    sm: "h-4 w-4",
+    default: "h-6 w-6",
+    md: "h-8 w-8",
+    lg: "h-10 w-10",
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 p-6 text-center">
+      <Loader2 className={`${sizeClasses[size]} animate-spin text-emerald-600`} />
+      {text && <p className="text-xs font-medium text-slate-500">{text}</p>}
+    </div>
+  );
+}
 
 export function ProductCardSkeleton() {
   return (

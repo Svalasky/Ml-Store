@@ -1,7 +1,16 @@
+﻿import { formatRupiah } from "./utils";
 import { Product } from "@/types/product";
-import { formatRupiah } from "./utils";
 
-export interface GenerateWhatsAppMessageOptions {
+export interface GenerateOrderWhatsAppMessageOptions {
+  orderNumber: string;
+  productName: string;
+  variantName?: string;
+  price: number;
+  customerName?: string;
+  customerNote?: string;
+}
+
+export interface GenerateProductWhatsAppMessageOptions {
   product: Product;
   productUrl?: string;
   isAskingAvailability?: boolean;
@@ -9,13 +18,35 @@ export interface GenerateWhatsAppMessageOptions {
 }
 
 export function cleanWhatsAppNumber(phoneNumber: string): string {
-  // Remove non-numeric characters
   let cleaned = phoneNumber.replace(/\D/g, "");
-  // If starts with 08, change to 628
   if (cleaned.startsWith("0")) {
     cleaned = "62" + cleaned.substring(1);
   }
   return cleaned;
+}
+
+export function generateOrderWhatsAppMessage({
+  orderNumber,
+  productName,
+  variantName,
+  price,
+  customerName,
+  customerNote,
+}: GenerateOrderWhatsAppMessageOptions): string {
+  const formattedPrice = formatRupiah(price);
+  const packageText = variantName || "Standar";
+
+  let msg = `Halo Admin 👋\n\nSaya ingin membeli:\n\nOrder ID: ${orderNumber}\n\nProduk:\n${productName}\n\nPaket:\n${packageText}\n\nHarga:\n${formattedPrice}\n`;
+
+  if (customerName) {
+    msg += `\nNama Pembeli: ${customerName}`;
+  }
+  if (customerNote) {
+    msg += `\nCatatan: ${customerNote}`;
+  }
+
+  msg += `\n\nMohon konfirmasi ketersediaannya.\n\nTerima kasih.`;
+  return msg;
 }
 
 export function generateProductWhatsAppMessage({
@@ -23,41 +54,24 @@ export function generateProductWhatsAppMessage({
   productUrl,
   isAskingAvailability = false,
   customNote,
-}: GenerateWhatsAppMessageOptions): string {
+}: GenerateProductWhatsAppMessageOptions): string {
   const formattedPrice = formatRupiah(product.price);
   const packageDuration = product.duration || "Standar";
 
   if (isAskingAvailability || product.status === "out_of_stock") {
-    return `Halo Admin 👋
-
-Saya tertarik dengan produk:
-
-Produk: ${product.name}
-Paket: ${packageDuration}
-Harga: ${formattedPrice}
-
-Status di website saat ini sedang kosong/habis. Apakah stok untuk produk ini masih bisa diorder atau kapan ready kembali?
-
-${productUrl ? `Link produk:\n${productUrl}\n\n` : ""}Terima kasih banyak.`;
+    return `Halo Admin 👋\n\nSaya tertarik dengan produk:\n\nProduk: ${product.name}\nPaket: ${packageDuration}\nHarga: ${formattedPrice}\n\nStatus di website saat ini sedang kosong/habis. Apakah stok untuk produk ini masih bisa diorder atau kapan ready kembali?\n\n${
+      productUrl ? `Link produk:\n${productUrl}\n\n` : ""
+    }Terima kasih banyak.`;
   }
 
-  return `Halo Admin 👋
-
-Saya ingin membeli produk:
-
-Produk: ${product.name}
-Paket: ${packageDuration}
-Harga: ${formattedPrice}
-${customNote ? `Catatan: ${customNote}\n` : ""}
-${productUrl ? `Link produk:\n${productUrl}\n\n` : ""}Mohon informasinya apakah produk masih tersedia & langkah pembayaran selanjutnya.
-
-Terima kasih.`;
+  return `Halo Admin 👋\n\nSaya ingin membeli produk:\n\nProduk: ${product.name}\nPaket: ${packageDuration}\nHarga: ${formattedPrice}\n${
+    customNote ? `Catatan: ${customNote}\n` : ""
+  }${
+    productUrl ? `Link produk:\n${productUrl}\n\n` : ""
+  }Mohon informasinya apakah produk masih tersedia & langkah pembayaran selanjutnya.\n\nTerima kasih.`;
 }
 
-export function buildWhatsAppUrl(
-  phoneNumber: string,
-  message: string
-): string {
+export function buildWhatsAppUrl(phoneNumber: string, message: string): string {
   const cleanNumber = cleanWhatsAppNumber(phoneNumber);
   const encodedText = encodeURIComponent(message);
   return `https://wa.me/${cleanNumber}?text=${encodedText}`;

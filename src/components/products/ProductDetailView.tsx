@@ -1,41 +1,58 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Product } from "@/types/product";
+import {
+  ShieldCheck,
+  Zap,
+  Clock,
+  CheckCircle,
+  FileText,
+  Share2,
+  Check,
+  Info,
+  Layers,
+  MessageCircle,
+} from "lucide-react";
+import { Product, ProductVariant } from "@/types/product";
 import { useStore } from "@/context/StoreContext";
 import { PriceDisplay } from "@/components/common/PriceDisplay";
 import { StockBadge } from "@/components/common/StockBadge";
-import { WhatsAppButton } from "@/components/common/WhatsAppButton";
-import { ProductCard } from "./ProductCard";
-import {
-  ChevronRight,
-  ShieldCheck,
-  Zap,
-  CheckCircle,
-  Clock,
-  Info,
-  FileText,
-  Share2,
-  Copy,
-  Check,
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ProductCard } from "@/components/products/ProductCard";
+import { OrderModal } from "@/components/products/OrderModal";
+import { formatRupiah } from "@/lib/utils";
 
 interface ProductDetailViewProps {
   product: Product;
+  relatedProducts: Product[];
 }
 
-export function ProductDetailView({ product }: ProductDetailViewProps) {
-  const { products, getCategoryById } = useStore();
+export function ProductDetailView({
+  product,
+  relatedProducts,
+}: ProductDetailViewProps) {
+  const { categories } = useStore();
   const [copied, setCopied] = useState(false);
-  const category = getCategoryById(product.categoryId);
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
 
-  // Related products
-  const relatedProducts = products
-    .filter((p) => p.id !== product.id && (p.categoryId === product.categoryId || p.featured))
-    .slice(0, 4);
+  // Variant selection state
+  const hasVariants = product.variants && product.variants.length > 0;
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>(
+    hasVariants ? product.variants![0] : undefined
+  );
+
+  const category = categories.find((c) => c.id === product.categoryId);
+  const activePrice = selectedVariant ? selectedVariant.price : product.price;
+  const activeOriginalPrice = selectedVariant
+    ? selectedVariant.originalPrice
+    : product.originalPrice;
+  const activeDuration = selectedVariant
+    ? selectedVariant.duration || selectedVariant.name
+    : product.duration || "Standar";
+  const activeStatus = selectedVariant ? selectedVariant.status : product.status;
+  const isOutOfStock = activeStatus === "out_of_stock";
 
   const handleShare = () => {
     if (typeof window !== "undefined") {
@@ -45,43 +62,49 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
     }
   };
 
-  const isOutOfStock = product.status === "out_of_stock";
-
   return (
-    <div className="space-y-12">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-xs md:text-sm text-slate-500 overflow-x-auto whitespace-nowrap">
-        <Link href="/" className="hover:text-slate-900 transition-colors">
+    <div className="space-y-12 pb-16">
+      {/* Order Modal */}
+      <OrderModal
+        isOpen={isOrderModalOpen}
+        onClose={() => setIsOrderModalOpen(false)}
+        product={product}
+        selectedVariant={selectedVariant}
+      />
+
+      {/* Breadcrumb Navigation */}
+      <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs sm:text-sm text-slate-500">
+        <Link href="/" className="hover:text-emerald-600 transition-colors">
           Beranda
         </Link>
-        <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-        <Link href="/products" className="hover:text-slate-900 transition-colors">
-          Produk
+        <span>/</span>
+        <Link href="/products" className="hover:text-emerald-600 transition-colors">
+          Katalog
         </Link>
-        <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />
         {category && (
           <>
+            <span>/</span>
             <Link
-              href={`/products?category=${category.id}`}
-              className="hover:text-slate-900 transition-colors"
+              href={`/products?category=${category.slug}`}
+              className="hover:text-emerald-600 transition-colors truncate max-w-[140px]"
             >
               {category.name}
             </Link>
-            <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />
           </>
         )}
-        <span className="text-slate-900 font-semibold truncate max-w-[200px] sm:max-w-none">
+        <span>/</span>
+        <span className="font-semibold text-slate-900 truncate max-w-[180px]">
           {product.name}
         </span>
       </nav>
 
-      {/* Main Product Showcase Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-        {/* Left Column: Image with glass badge */}
+      {/* Main Product Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+        {/* Left Column: Product Image & Badges */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="relative aspect-[4/3] sm:aspect-square w-full overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-sm">
+          <div className="relative aspect-square w-full overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-sm">
             <Image
-              src={product.image}
+              src={product.image || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80"}
               alt={product.name}
               fill
               priority
@@ -89,7 +112,7 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
               className="object-cover"
             />
             <div className="absolute top-4 right-4">
-              <StockBadge status={product.status} />
+              <StockBadge status={activeStatus} />
             </div>
           </div>
 
@@ -97,7 +120,7 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
           <div className="grid grid-cols-2 gap-3 pt-2">
             <div className="flex items-center gap-2.5 rounded-xl border border-slate-200/80 bg-white p-3 text-xs text-slate-700 shadow-xs">
               <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-              <span>Garansi Full Penggantian</span>
+              <span>Garansi Full Replace</span>
             </div>
             <div className="flex items-center gap-2.5 rounded-xl border border-slate-200/80 bg-white p-3 text-xs text-slate-700 shadow-xs">
               <Zap className="h-4 w-4 text-amber-500 shrink-0" />
@@ -106,7 +129,7 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
           </div>
         </div>
 
-        {/* Right Column: Title, pricing, features, purchase CTA */}
+        {/* Right Column: Title, variants, pricing, features, purchase CTA */}
         <div className="lg:col-span-7 space-y-6">
           <div>
             <div className="flex items-center justify-between gap-4 mb-2">
@@ -138,48 +161,104 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
               {product.name}
             </h1>
 
-            {product.duration && (
+            {activeDuration && (
               <div className="mt-2.5 flex items-center gap-2 text-sm text-slate-600">
                 <Clock className="h-4 w-4 text-slate-400" />
                 <span>Masa Aktif / Paket:</span>
                 <span className="font-semibold text-slate-900 bg-slate-100 px-2.5 py-0.5 rounded-md">
-                  {product.duration}
+                  {activeDuration}
                 </span>
               </div>
             )}
           </div>
 
+          {/* Variants Selector */}
+          {hasVariants && (
+            <div className="space-y-2.5 pt-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <Layers className="h-4 w-4 text-emerald-600" />
+                <span>Pilih Paket / Varian:</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {product.variants!.map((variant) => {
+                  const isSelected = selectedVariant?.id === variant.id;
+                  const isVarOut = variant.status === "out_of_stock";
+
+                  return (
+                    <button
+                      key={variant.id}
+                      type="button"
+                      onClick={() => setSelectedVariant(variant)}
+                      className={`relative flex flex-col text-left p-3.5 rounded-2xl border transition-all ${
+                        isSelected
+                          ? "border-emerald-600 bg-emerald-50/50 shadow-sm ring-2 ring-emerald-500/20"
+                          : "border-slate-200 hover:border-slate-300 bg-white"
+                      } ${isVarOut ? "opacity-60 cursor-not-allowed" : ""}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-900">
+                          {variant.name}
+                        </span>
+                        {isSelected && (
+                          <CheckCircle className="h-4 w-4 text-emerald-600" />
+                        )}
+                      </div>
+                      <div className="mt-1 flex items-baseline gap-2">
+                        <span className="text-sm font-extrabold text-emerald-700">
+                          {formatRupiah(variant.price)}
+                        </span>
+                        {variant.originalPrice && (
+                          <span className="text-xs text-slate-400 line-through">
+                            {formatRupiah(variant.originalPrice)}
+                          </span>
+                        )}
+                      </div>
+                      {variant.description && (
+                        <p className="mt-1 text-[11px] text-slate-500">
+                          {variant.description}
+                        </p>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Pricing Box */}
           <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50/50 to-teal-50/20 p-5">
             <span className="text-xs text-slate-500 font-medium block mb-1">
-              Harga Spesial:
+              Harga Paket:
             </span>
             <PriceDisplay
-              price={product.price}
-              originalPrice={product.originalPrice}
+              price={activePrice}
+              originalPrice={activeOriginalPrice}
               size="xl"
             />
             <p className="mt-2 text-xs text-slate-500">
-              *Harga tertera sudah nett tanpa biaya tersembunyi.
+              *Harga tertera sudah nett dengan garansi penuh selama masa aktif.
             </p>
           </div>
 
           {/* Primary Action Button (WhatsApp purchase funnel) */}
           <div className="space-y-3 pt-2">
-            <WhatsAppButton
-              product={product}
+            <Button
+              onClick={() => setIsOrderModalOpen(true)}
               size="lg"
-              fullWidth
-              className="text-base py-6 shadow-lg rounded-2xl"
-            />
+              variant={isOutOfStock ? "outline" : "whatsapp"}
+              className="w-full text-base py-6 shadow-lg rounded-2xl gap-2 font-bold"
+            >
+              <MessageCircle className="h-5 w-5 fill-white text-white" />
+              <span>{isOutOfStock ? "Tanya Ketersediaan Stok" : "Beli via WhatsApp"}</span>
+            </Button>
 
             {isOutOfStock ? (
               <p className="text-xs text-center text-amber-700 bg-amber-50 rounded-xl p-2.5 border border-amber-200">
-                ⚠️ Stok saat ini sedang kosong. Klik tombol di atas untuk bertanya kepada Admin mengenai estimasi restock.
+                Stok saat ini sedang kosong. Klik tombol di atas untuk bertanya kepada Admin mengenai estimasi restock.
               </p>
             ) : (
               <p className="text-xs text-center text-slate-500">
-                Klik tombol di atas untuk membuka WhatsApp dengan format pesanan otomatis.
+                Klik tombol di atas untuk membuat pesanan resmi dan langsung terhubung dengan Admin via WhatsApp.
               </p>
             )}
           </div>
@@ -189,7 +268,7 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
             <h3 className="text-base font-bold text-slate-900 mb-2.5">
               Deskripsi Produk
             </h3>
-            <p className="text-sm text-slate-600 leading-relaxed">
+            <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
               {product.description}
             </p>
           </div>

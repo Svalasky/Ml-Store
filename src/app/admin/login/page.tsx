@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Sparkles, Shield, ArrowLeft, KeyRound, Mail, AlertCircle } from "lucide-react";
+import { Shield, ArrowLeft, KeyRound, Mail, AlertCircle, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -31,15 +31,15 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
-      const success = await login(email, password);
-      if (success) {
+      const result = await login(email, password);
+      if (result.success) {
         toast.success("Login berhasil! Selamat datang Admin.");
         router.push("/admin");
       } else {
-        setError("Email/username atau password salah. Cek demo credentials di bawah.");
+        setError(result.error || "Email atau password salah.");
       }
     } catch (err: any) {
-      setError("Terjadi kesalahan sistem.");
+      setError(err?.message || "Terjadi kesalahan koneksi autentikasi.");
     } finally {
       setIsLoading(false);
     }
@@ -76,7 +76,7 @@ export default function AdminLoginPage() {
             Admin Authentication
           </h1>
           <p className="mt-1.5 text-xs text-slate-400">
-            Masuk ke panel manajemen produk dan pengaturan toko
+            Masuk dengan akun Supabase Auth untuk mengelola toko & transaksi
           </p>
         </div>
 
@@ -91,14 +91,14 @@ export default function AdminLoginPage() {
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                Email / Username
+                Email Admin
               </label>
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
                   <Mail className="h-4 w-4" />
                 </div>
                 <Input
-                  type="text"
+                  type="email"
                   placeholder="admin@molestore.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -118,7 +118,7 @@ export default function AdminLoginPage() {
                 </div>
                 <Input
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="••••••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 bg-slate-950/50 border-slate-800 text-white placeholder:text-slate-600 focus:border-emerald-500"
@@ -130,9 +130,16 @@ export default function AdminLoginPage() {
             <Button
               type="submit"
               className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl h-11 shadow-md shadow-emerald-600/20"
-              isLoading={isLoading}
+              disabled={isLoading}
             >
-              Masuk Dashboard
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span>Memverifikasi...</span>
+                </>
+              ) : (
+                <span>Masuk Dashboard</span>
+              )}
             </Button>
           </form>
 

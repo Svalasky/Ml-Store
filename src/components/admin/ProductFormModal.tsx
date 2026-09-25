@@ -1,21 +1,22 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
-import { Product, ProductStatus } from "@/types/product";
+import { Plus, Trash2, Layers } from "lucide-react";
+import { Product, ProductStatus, ProductVariant } from "@/types/product";
 import { useStore } from "@/context/StoreContext";
-import { Modal } from "@/components/ui/modal";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select } from "@/components/ui/select";
-import { ImageUploader } from "./ImageUploader";
 import { slugify } from "@/lib/utils";
+import { Modal } from "@/components/ui/modal";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { ImageUploader } from "@/components/admin/ImageUploader";
 
 interface ProductFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   product?: Product | null;
-  onSuccess: (message: string) => void;
+  onSuccess: (msg: string) => void;
 }
 
 export function ProductFormModal({
@@ -25,7 +26,7 @@ export function ProductFormModal({
   onSuccess,
 }: ProductFormModalProps) {
   const { categories, addProduct, updateProduct } = useStore();
-  const isEditing = Boolean(product);
+  const isEditing = !!product;
 
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -33,12 +34,16 @@ export function ProductFormModal({
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [originalPrice, setOriginalPrice] = useState("");
-  const [duration, setDuration] = useState("1 Bulan");
+  const [duration, setDuration] = useState("");
   const [image, setImage] = useState("");
   const [featuresText, setFeaturesText] = useState("");
+  const [termsText, setTermsText] = useState("");
   const [status, setStatus] = useState<ProductStatus>("available");
   const [featured, setFeatured] = useState(false);
-  const [termsText, setTermsText] = useState("");
+
+  // Variant manager state
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -47,15 +52,16 @@ export function ProductFormModal({
       setName(product.name);
       setSlug(product.slug);
       setCategoryId(product.categoryId);
-      setDescription(product.description);
+      setDescription(product.description || "");
       setPrice(product.price.toString());
       setOriginalPrice(product.originalPrice ? product.originalPrice.toString() : "");
-      setDuration(product.duration || "1 Bulan");
+      setDuration(product.duration || "");
       setImage(product.image);
-      setFeaturesText(product.features.join("\n"));
+      setFeaturesText((product.features || []).join("\n"));
+      setTermsText((product.terms || []).join("\n"));
       setStatus(product.status);
-      setFeatured(product.featured);
-      setTermsText(product.terms ? product.terms.join("\n") : "");
+      setFeatured(product.featured || false);
+      setVariants(product.variants || []);
     } else {
       setName("");
       setSlug("");
@@ -65,10 +71,22 @@ export function ProductFormModal({
       setOriginalPrice("");
       setDuration("1 Bulan");
       setImage("https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=800&auto=format&fit=crop&q=80");
-      setFeaturesText("Garansi Full Penggantian\nLegal & Bergaransi\nProses Instan");
+      setFeaturesText("Garansi Penuh Selama Durasi\n1 User 1 Device\nProses Cepat 1-5 Menit");
+      setTermsText("Dilarang mengubah email/password\nGunakan profil sesuai nomor");
       setStatus("available");
       setFeatured(false);
-      setTermsText("Dilarang mengubah email/password\nGaransi hangus jika melanggar ToS");
+      setVariants([
+        {
+          id: `var-1-${Date.now()}`,
+          productId: "",
+          name: "1 Bulan",
+          price: 35000,
+          originalPrice: 54000,
+          duration: "1 Bulan",
+          stock: 50,
+          status: "available",
+        },
+      ]);
     }
     setError("");
   }, [product, categories, isOpen]);
@@ -78,6 +96,30 @@ export function ProductFormModal({
     if (!isEditing) {
       setSlug(slugify(val));
     }
+  };
+
+  const handleAddVariant = () => {
+    const newVar: ProductVariant = {
+      id: `var-${Date.now()}`,
+      productId: product?.id || "",
+      name: "3 Bulan",
+      price: Number(price) ? Number(price) * 2.5 : 90000,
+      originalPrice: Number(originalPrice) ? Number(originalPrice) * 3 : undefined,
+      duration: "3 Bulan",
+      stock: 20,
+      status: "available",
+    };
+    setVariants([...variants, newVar]);
+  };
+
+  const handleRemoveVariant = (index: number) => {
+    setVariants(variants.filter((_, i) => i !== index));
+  };
+
+  const handleVariantChange = (index: number, field: keyof ProductVariant, val: any) => {
+    const updated = [...variants];
+    updated[index] = { ...updated[index], [field]: val };
+    setVariants(updated);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -127,6 +169,7 @@ export function ProductFormModal({
         status,
         featured,
         terms,
+        variants,
       };
 
       if (isEditing && product) {
@@ -150,9 +193,9 @@ export function ProductFormModal({
       onClose={onClose}
       title={isEditing ? "Edit Produk Akun" : "Tambah Produk Akun Baru"}
       description="Lengkapi detail produk akun digital di bawah ini."
-      maxWidth="2xl"
+      size="lg"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
         {error && (
           <div className="rounded-xl bg-red-50 p-3 text-xs text-red-700 border border-red-200">
             {error}
@@ -166,7 +209,7 @@ export function ProductFormModal({
             </label>
             <Input
               type="text"
-              placeholder="Contoh: Netflix Premium 1 Bulan"
+              placeholder="Contoh: Netflix Premium 4K"
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
               required
@@ -179,7 +222,7 @@ export function ProductFormModal({
             </label>
             <Input
               type="text"
-              placeholder="netflix-premium-1-bulan"
+              placeholder="netflix-premium-4k"
               value={slug}
               onChange={(e) => setSlug(slugify(e.target.value))}
               required
@@ -208,7 +251,7 @@ export function ProductFormModal({
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Durasi / Paket
+              Durasi Default
             </label>
             <Input
               type="text"
@@ -222,7 +265,7 @@ export function ProductFormModal({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Harga Jual (Rp) *
+              Harga Mulai Dari (Rp) *
             </label>
             <Input
               type="number"
@@ -246,6 +289,80 @@ export function ProductFormModal({
           </div>
         </div>
 
+        {/* Variants Section */}
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+              <Layers className="h-4 w-4 text-emerald-600" />
+              <span>Pilihan Paket / Varian Produk ({variants.length})</span>
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAddVariant}
+              className="text-xs gap-1 h-7"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Tambah Varian</span>
+            </Button>
+          </div>
+
+          {variants.length === 0 ? (
+            <p className="text-xs text-slate-400 italic">
+              Belum ada paket/varian tambahan. Produk akan menggunakan harga default.
+            </p>
+          ) : (
+            <div className="space-y-2.5">
+              {variants.map((v, idx) => (
+                <div
+                  key={v.id || idx}
+                  className="grid grid-cols-1 sm:grid-cols-12 gap-2 p-2.5 bg-white rounded-xl border border-slate-200 items-center"
+                >
+                  <div className="sm:col-span-4">
+                    <input
+                      type="text"
+                      placeholder="Nama Varian (1 Bulan)"
+                      value={v.name}
+                      onChange={(e) => handleVariantChange(idx, "name", e.target.value)}
+                      className="w-full text-xs font-semibold p-1.5 rounded-lg border border-slate-200"
+                      required
+                    />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <input
+                      type="number"
+                      placeholder="Harga (Rp)"
+                      value={v.price}
+                      onChange={(e) => handleVariantChange(idx, "price", Number(e.target.value))}
+                      className="w-full text-xs p-1.5 rounded-lg border border-slate-200"
+                      required
+                    />
+                  </div>
+                  <div className="sm:col-span-3">
+                    <input
+                      type="text"
+                      placeholder="Durasi"
+                      value={v.duration || ""}
+                      onChange={(e) => handleVariantChange(idx, "duration", e.target.value)}
+                      className="w-full text-xs p-1.5 rounded-lg border border-slate-200"
+                    />
+                  </div>
+                  <div className="sm:col-span-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveVariant(idx)}
+                      className="p-1 text-slate-400 hover:text-rose-500 rounded"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1">
             Deskripsi Produk
@@ -258,8 +375,8 @@ export function ProductFormModal({
           />
         </div>
 
-        {/* Image Uploader */}
-        <ImageUploader value={image} onChange={setImage} />
+        {/* Supabase Storage Image Uploader */}
+        <ImageUploader value={image} onChange={setImage} pathPrefix="products" />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
@@ -267,7 +384,7 @@ export function ProductFormModal({
               Fitur Produk (1 baris per fitur)
             </label>
             <Textarea
-              rows={4}
+              rows={3}
               placeholder="Ultra HD 4K&#10;Dolby Atmos&#10;Private PIN"
               value={featuresText}
               onChange={(e) => setFeaturesText(e.target.value)}
@@ -279,7 +396,7 @@ export function ProductFormModal({
               Syarat & Ketentuan (1 baris per poin)
             </label>
             <Textarea
-              rows={4}
+              rows={3}
               placeholder="Dilarang ganti email&#10;Garansi 30 hari penuh"
               value={termsText}
               onChange={(e) => setTermsText(e.target.value)}
@@ -321,7 +438,7 @@ export function ProductFormModal({
           <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
             Batal
           </Button>
-          <Button type="submit" isLoading={isLoading}>
+          <Button type="submit" disabled={isLoading}>
             {isEditing ? "Simpan Perubahan" : "Tambah Produk"}
           </Button>
         </div>

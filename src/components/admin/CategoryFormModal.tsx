@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { Category } from "@/types/category";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
+import { ImageUploader } from "@/components/admin/ImageUploader";
 import { slugify } from "@/lib/utils";
 
 interface CategoryFormModalProps {
@@ -39,6 +40,7 @@ export function CategoryFormModal({
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
+  const [image, setImage] = useState("");
   const [icon, setIcon] = useState("Tv");
   const [active, setActive] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,12 +51,14 @@ export function CategoryFormModal({
       setName(category.name);
       setSlug(category.slug);
       setDescription(category.description || "");
+      setImage(category.image || "");
       setIcon(category.icon || "Tv");
       setActive(category.active);
     } else {
       setName("");
       setSlug("");
       setDescription("");
+      setImage("");
       setIcon("Tv");
       setActive(true);
     }
@@ -81,6 +85,7 @@ export function CategoryFormModal({
         name: name.trim(),
         slug: slug.trim() || slugify(name),
         description: description.trim(),
+        image: image.trim(),
         icon,
         active,
       };
@@ -106,7 +111,7 @@ export function CategoryFormModal({
       onClose={onClose}
       title={isEditing ? "Edit Kategori" : "Tambah Kategori Baru"}
       description="Kelola kategori produk untuk mempermudah navigasi pembeli."
-      maxWidth="md"
+      size="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
@@ -166,6 +171,13 @@ export function CategoryFormModal({
           />
         </div>
 
+        <ImageUploader
+          value={image}
+          onChange={setImage}
+          label="Foto Cover Kategori (Opsional)"
+          pathPrefix="categories"
+        />
+
         <div className="pt-2">
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <input
@@ -184,7 +196,7 @@ export function CategoryFormModal({
           <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
             Batal
           </Button>
-          <Button type="submit" isLoading={isLoading}>
+          <Button type="submit" disabled={isLoading}>
             {isEditing ? "Simpan Perubahan" : "Tambah Kategori"}
           </Button>
         </div>

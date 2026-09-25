@@ -1,16 +1,20 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  ShoppingCart,
+  History,
   Package,
   Layers,
   Settings,
   LogOut,
   ExternalLink,
   Sparkles,
+  ShieldCheck,
+  UserCheck,
   X,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -24,14 +28,16 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
-  const { logout, user } = useAuth();
+  const { logout, user, isAdmin } = useAuth();
   const { settings } = useStore();
 
   const navItems = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { label: "Produk", href: "/admin/products", icon: Package },
+    { label: "Kelola Pesanan", href: "/admin/orders", icon: ShoppingCart },
+    { label: "Riwayat Pembelian", href: "/admin/purchases", icon: History },
+    { label: "Katalog Produk", href: "/admin/products", icon: Package },
     { label: "Kategori", href: "/admin/categories", icon: Layers },
-    { label: "Pengaturan Toko", href: "/admin/settings", icon: Settings },
+    { label: "Pengaturan Toko", href: "/admin/settings", icon: Settings, adminOnly: true },
   ];
 
   const isActive = (href: string) => {
@@ -88,6 +94,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
           </div>
 
           {navItems.map((item) => {
+            if (item.adminOnly && !isAdmin) return null;
             const Icon = item.icon;
             const active = isActive(item.href);
 
@@ -129,9 +136,16 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
         <div className="p-4 border-t border-slate-800/80">
           <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900/80 border border-slate-800">
             <div className="overflow-hidden pr-2">
-              <p className="text-xs font-semibold text-white truncate">
-                {user?.name || "Administrator"}
-              </p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-semibold text-white truncate">
+                  {user?.name || "Administrator"}
+                </p>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold uppercase ${
+                  isAdmin ? "bg-emerald-500/20 text-emerald-300" : "bg-blue-500/20 text-blue-300"
+                }`}>
+                  {user?.role || "Staff"}
+                </span>
+              </div>
               <p className="text-[11px] text-slate-400 truncate">
                 {user?.email || "admin@molestore.com"}
               </p>
