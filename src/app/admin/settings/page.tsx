@@ -1,288 +1,114 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Settings as SettingsIcon,
-  MessageCircle,
-  Store,
-  Share2,
-  Save,
-  RotateCcw,
-  CheckCircle,
-  ExternalLink,
-} from "lucide-react";
-import { useStore } from "@/context/StoreContext";
-import { StoreSettings } from "@/types/settings";
-import { cleanWhatsAppNumber } from "@/lib/whatsapp";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { StoreSettings } from "@/types/database";
+import { getStoreSettings } from "@/services/settingService";
+import { Settings, Save, CheckCircle2, MessageCircle, Shield } from "lucide-react";
 
 export default function AdminSettingsPage() {
-  const { settings, updateSettings, resetToDefault } = useStore();
-  const [form, setForm] = useState<StoreSettings>({
-    storeName: "Mole Store",
-    tagline: "Pusat Akun Digital Legal, Murah & Bergaransi",
-    description: "",
-    whatsappNumber: "6281234567890",
-    whatsappMessage: "Halo Admin Mole Store, saya ingin bertanya seputar produk...",
-    instagramUrl: "",
-    tiktokUrl: "",
-    telegramUrl: "",
-    email: "support@molestore.com",
+  const [settings, setSettings] = useState<StoreSettings>({
+    store_name: "MLBB Account Store",
+    whatsapp_number: "6281234567890",
+    instagram: "@mlbb_store",
+    tiktok: "@mlbb_store",
+    email: "support@mlbb-store.com",
   });
-  const [isSaving, setIsSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    if (settings) {
-      setForm(settings);
-    }
-  }, [settings]);
+    getStoreSettings().then(setSettings);
+  }, []);
 
-  const handleChange = (field: keyof StoreSettings, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleSave = async (e: React.FormEvent) => {
+  const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSaving(true);
-    try {
-      await updateSettings(form);
-      toast.success("Pengaturan toko berhasil disimpan ke database!");
-    } catch (err: any) {
-      toast.error(err?.message || "Gagal menyimpan pengaturan.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleReset = () => {
-    if (confirm("Reset seluruh data kembali ke bawaan sistem? Data lokal akan disegarkan.")) {
-      resetToDefault();
-      toast.info("Pengaturan telah di-reset ke nilai default.");
-    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
   };
 
   return (
-    <div className="space-y-6 max-w-4xl pb-16">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            Pengaturan Toko & Kontak
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Atur nomor WhatsApp order, identitas toko, dan tautan sosial media resmi.
+    <div className="space-y-6 max-w-3xl">
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+          Pengaturan Toko (Store Settings)
+        </h1>
+        <p className="text-xs text-muted-foreground font-mono">
+          Kelola informasi kontak WhatsApp resmi, nama marketplace, dan sosial media.
+        </p>
+      </div>
+
+      <form onSubmit={handleSave} className="p-6 rounded-2xl bg-card border border-border space-y-5 text-xs">
+        {saved && (
+          <div className="p-3 rounded-xl bg-emerald-950/60 border border-emerald-600 text-emerald-300 flex items-center gap-2 font-semibold">
+            <CheckCircle2 className="w-4 h-4" />
+            <span>Pengaturan berhasil disimpan!</span>
+          </div>
+        )}
+
+        <div className="space-y-1.5">
+          <label className="font-bold text-foreground">Nama Toko / Marketplace</label>
+          <input
+            type="text"
+            value={settings.store_name}
+            onChange={(e) => setSettings({ ...settings, store_name: e.target.value })}
+            className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border text-xs focus:ring-2 focus:ring-primary focus:outline-none font-semibold"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="font-bold text-foreground">
+            Nomor WhatsApp Resmi Admin (Format: 628xxx)
+          </label>
+          <input
+            type="text"
+            value={settings.whatsapp_number}
+            onChange={(e) => setSettings({ ...settings, whatsapp_number: e.target.value })}
+            className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border text-xs focus:ring-2 focus:ring-primary focus:outline-none font-mono"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Nomor ini akan digunakan untuk semua redirect checkout pesanan akun dari pelanggan.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleReset}
-            className="text-xs text-slate-600 gap-1.5 h-10"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            <span>Reset Default</span>
-          </Button>
-
-          <Button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl gap-2 h-10 shadow-sm text-xs font-bold"
-          >
-            <Save className="h-4 w-4" />
-            <span>Simpan Perubahan</span>
-          </Button>
-        </div>
-      </div>
-
-      <form onSubmit={handleSave} className="space-y-6">
-        {/* Section 1: WhatsApp Configuration */}
-        <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/40 via-white to-white p-6 shadow-xs space-y-4">
-          <div className="flex items-center gap-3 border-b border-emerald-100 pb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white">
-              <MessageCircle className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900">
-                Konfigurasi WhatsApp Sales Funnel
-              </h3>
-              <p className="text-xs text-slate-500">
-                Nomor ini akan menerima seluruh pesanan dan pertanyaan dari calon customer
-              </p>
-            </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-border/60">
+          <div className="space-y-1.5">
+            <label className="font-bold text-foreground">Akun Instagram</label>
+            <input
+              type="text"
+              value={settings.instagram || ""}
+              onChange={(e) => setSettings({ ...settings, instagram: e.target.value })}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border text-xs"
+            />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Nomor WhatsApp Admin (Aktif) *
-              </label>
-              <Input
-                type="text"
-                placeholder="6281234567890"
-                value={form.whatsappNumber}
-                onChange={(e) => handleChange("whatsappNumber", e.target.value)}
-                required
-              />
-              <p className="mt-1 text-[11px] text-slate-400">
-                Gunakan awalan kode negara (contoh: 6281234567890). Link:{" "}
-                <span className="font-mono text-emerald-700">
-                  wa.me/{cleanWhatsAppNumber(form.whatsappNumber)}
-                </span>
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Pesan Default / Umum
-              </label>
-              <Input
-                type="text"
-                value={form.whatsappMessage}
-                onChange={(e) => handleChange("whatsappMessage", e.target.value)}
-                placeholder="Halo Admin, saya ingin bertanya..."
-              />
-              <p className="mt-1 text-[11px] text-slate-400">
-                Pesan pembuka ketika customer menekan tombol Chat WhatsApp umum
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 2: Identitas Toko */}
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs space-y-4">
-          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-              <Store className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900">Identitas Toko</h3>
-              <p className="text-xs text-slate-500">Nama toko, slogan, dan deskripsi publik</p>
-            </div>
+          <div className="space-y-1.5">
+            <label className="font-bold text-foreground">Akun TikTok</label>
+            <input
+              type="text"
+              value={settings.tiktok || ""}
+              onChange={(e) => setSettings({ ...settings, tiktok: e.target.value })}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border text-xs"
+            />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Nama Toko *
-              </label>
-              <Input
-                type="text"
-                value={form.storeName}
-                onChange={(e) => handleChange("storeName", e.target.value)}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Slogan / Tagline
-              </label>
-              <Input
-                type="text"
-                value={form.tagline || ""}
-                onChange={(e) => handleChange("tagline", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Deskripsi Toko (SEO & Footer)
-            </label>
-            <Textarea
-              rows={3}
-              value={form.description}
-              onChange={(e) => handleChange("description", e.target.value)}
+          <div className="space-y-1.5 sm:col-span-2">
+            <label className="font-bold text-foreground">Email Dukungan Pelanggan</label>
+            <input
+              type="email"
+              value={settings.email || ""}
+              onChange={(e) => setSettings({ ...settings, email: e.target.value })}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border text-xs font-mono"
             />
           </div>
         </div>
 
-        {/* Section 3: Social Media & Kontak */}
-        <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs space-y-4">
-          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-              <Share2 className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900">
-                Media Sosial & Kontak Resmi
-              </h3>
-              <p className="text-xs text-slate-500">
-                Tampilkan channel resmi agar meningkatkan kredibilitas di mata calon pembeli
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Instagram URL / Username
-              </label>
-              <Input
-                type="text"
-                placeholder="https://instagram.com/molestore"
-                value={form.instagramUrl || ""}
-                onChange={(e) => handleChange("instagramUrl", e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                TikTok URL / Username
-              </label>
-              <Input
-                type="text"
-                placeholder="https://tiktok.com/@molestore"
-                value={form.tiktokUrl || ""}
-                onChange={(e) => handleChange("tiktokUrl", e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Telegram Channel / URL
-              </label>
-              <Input
-                type="text"
-                placeholder="https://t.me/molestore"
-                value={form.telegramUrl || ""}
-                onChange={(e) => handleChange("telegramUrl", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Email Dukungan
-              </label>
-              <Input
-                type="email"
-                placeholder="support@molestore.com"
-                value={form.email || ""}
-                onChange={(e) => handleChange("email", e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Submit */}
-        <div className="flex justify-end pt-2">
-          <Button
+        <div className="pt-4 border-t border-border flex justify-end">
+          <button
             type="submit"
-            size="lg"
-            disabled={isSaving}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl px-8 shadow-md font-bold"
+            className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold flex items-center gap-2 hover:bg-primary/90 shadow-md"
           >
-            Simpan Seluruh Pengaturan
-          </Button>
+            <Save className="w-4 h-4" />
+            <span>Simpan Pengaturan</span>
+          </button>
         </div>
       </form>
     </div>

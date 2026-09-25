@@ -1,78 +1,74 @@
-﻿import { formatRupiah } from "./utils";
+import { env } from "@/config/env";
 import { Product } from "@/types/product";
 
-export interface GenerateOrderWhatsAppMessageOptions {
-  orderNumber: string;
-  productName: string;
-  variantName?: string;
-  price: number;
-  customerName?: string;
-  customerNote?: string;
+export function formatIDR(amount: number): string {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(amount);
 }
 
-export interface GenerateProductWhatsAppMessageOptions {
+export function generateOrderNumber(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+  return `ORD-${year}${month}${day}-${randomSuffix}`;
+}
+
+export interface BuildWAMessageParams {
+  orderNumber: string;
   product: Product;
   productUrl?: string;
-  isAskingAvailability?: boolean;
-  customNote?: string;
 }
 
-export function cleanWhatsAppNumber(phoneNumber: string): string {
-  let cleaned = phoneNumber.replace(/\D/g, "");
-  if (cleaned.startsWith("0")) {
-    cleaned = "62" + cleaned.substring(1);
-  }
-  return cleaned;
-}
-
-export function generateOrderWhatsAppMessage({
+export function buildWhatsAppMessage({
   orderNumber,
-  productName,
-  variantName,
-  price,
-  customerName,
-  customerNote,
-}: GenerateOrderWhatsAppMessageOptions): string {
-  const formattedPrice = formatRupiah(price);
-  const packageText = variantName || "Standar";
-
-  let msg = `Halo Admin 👋\n\nSaya ingin membeli:\n\nOrder ID: ${orderNumber}\n\nProduk:\n${productName}\n\nPaket:\n${packageText}\n\nHarga:\n${formattedPrice}\n`;
-
-  if (customerName) {
-    msg += `\nNama Pembeli: ${customerName}`;
-  }
-  if (customerNote) {
-    msg += `\nCatatan: ${customerNote}`;
-  }
-
-  msg += `\n\nMohon konfirmasi ketersediaannya.\n\nTerima kasih.`;
-  return msg;
-}
-
-export function generateProductWhatsAppMessage({
   product,
   productUrl,
-  isAskingAvailability = false,
-  customNote,
-}: GenerateProductWhatsAppMessageOptions): string {
-  const formattedPrice = formatRupiah(product.price);
-  const packageDuration = product.duration || "Standar";
+}: BuildWAMessageParams): string {
+  const url =
+    productUrl ||
+    (typeof window !== "undefined"
+      ? `${window.location.origin}/products/${product.slug}`
+      : `https://mlbb-store.com/products/${product.slug}`);
 
-  if (isAskingAvailability || product.status === "out_of_stock") {
-    return `Halo Admin 👋\n\nSaya tertarik dengan produk:\n\nProduk: ${product.name}\nPaket: ${packageDuration}\nHarga: ${formattedPrice}\n\nStatus di website saat ini sedang kosong/habis. Apakah stok untuk produk ini masih bisa diorder atau kapan ready kembali?\n\n${
-      productUrl ? `Link produk:\n${productUrl}\n\n` : ""
-    }Terima kasih banyak.`;
-  }
+  return `Halo Admin 👋
 
-  return `Halo Admin 👋\n\nSaya ingin membeli produk:\n\nProduk: ${product.name}\nPaket: ${packageDuration}\nHarga: ${formattedPrice}\n${
-    customNote ? `Catatan: ${customNote}\n` : ""
-  }${
-    productUrl ? `Link produk:\n${productUrl}\n\n` : ""
-  }Mohon informasinya apakah produk masih tersedia & langkah pembayaran selanjutnya.\n\nTerima kasih.`;
+Saya ingin membeli akun Mobile Legends.
+
+Order ID:
+${orderNumber}
+
+Akun:
+${product.name}
+
+Rank:
+${product.rank || "Mythic"}
+
+Skin:
+${product.skin_count}
+
+Collector:
+${product.collector_count || 0}
+
+Legend:
+${product.legend_count || 0}
+
+Harga:
+${formatIDR(product.price)}
+
+Link:
+${url}
+
+Apakah akun masih tersedia?
+
+Terima kasih.`;
 }
 
-export function buildWhatsAppUrl(phoneNumber: string, message: string): string {
-  const cleanNumber = cleanWhatsAppNumber(phoneNumber);
-  const encodedText = encodeURIComponent(message);
-  return `https://wa.me/${cleanNumber}?text=${encodedText}`;
+export function getWhatsAppUrl(message: string, customPhone?: string): string {
+  const phone = (customPhone || env.whatsappNumber).replace(/[^0-9]/g, "");
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }

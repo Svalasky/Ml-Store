@@ -1,276 +1,259 @@
-﻿"use client";
+"use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import {
-  Search,
-  Filter,
-  Eye,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  RefreshCw,
-  ShoppingCart,
-  MessageCircle,
-  Calendar,
-  AlertCircle,
-} from "lucide-react";
-import { orderService } from "@/services/orderService";
 import { Order, OrderStatus, PaymentStatus } from "@/types/order";
-import { formatRupiah, formatDate } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { LoadingSpinner } from "@/components/common/LoadingState";
-import { buildWhatsAppUrl } from "@/lib/whatsapp";
+import { getOrders, updateOrderStatus, updatePaymentStatus } from "@/services/orderService";
+import { formatIDR, getWhatsAppUrl } from "@/lib/whatsapp";
+import {
+  ShoppingBag,
+  Search,
+  MessageCircle,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Eye,
+} from "lucide-react";
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [paymentFilter, setPaymentFilter] = useState<string>("all");
 
-  const loadOrders = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const data = await orderService.getAll({
-        search: search.trim() || undefined,
-        status: statusFilter as any,
-        paymentStatus: paymentFilter as any,
-      });
-      setOrders(data);
-    } catch (err) {
-      console.error("Failed to load orders", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [search, statusFilter, paymentFilter]);
+  const loadOrders = async () => {
+    const data = await getOrders();
+    setOrders(data);
+  };
 
   useEffect(() => {
     loadOrders();
-  }, [loadOrders]);
+  }, []);
 
-  const getStatusBadge = (status: OrderStatus) => {
-    switch (status) {
-      case "completed":
-        return <Badge variant="success">Completed</Badge>;
-      case "processing":
-        return <Badge variant="info">Processing</Badge>;
-      case "paid":
-        return <Badge variant="success">Paid</Badge>;
-      case "waiting_payment":
-        return <Badge variant="warning">Waiting Payment</Badge>;
-      case "cancelled":
-        return <Badge variant="danger">Cancelled</Badge>;
-      case "pending":
-      default:
-        return <Badge variant="warning">Pending</Badge>;
-    }
+  const handleStatusChange = async (orderId: string, status: OrderStatus) => {
+    await updateOrderStatus(orderId, status);
+    loadOrders();
   };
 
-  const getPaymentBadge = (status: PaymentStatus) => {
-    switch (status) {
-      case "paid":
-        return <span className="inline-flex items-center text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Lunas</span>;
-      case "refunded":
-        return <span className="inline-flex items-center text-[11px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">Refund</span>;
-      case "pending":
-        return <span className="inline-flex items-center text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">Pending</span>;
-      case "unpaid":
-      default:
-        return <span className="inline-flex items-center text-[11px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">Belum Bayar</span>;
-    }
+  const handlePaymentStatusChange = async (
+    orderId: string,
+    paymentStatus: PaymentStatus
+  ) => {
+    await updatePaymentStatus(orderId, paymentStatus);
+    loadOrders();
   };
+
+  const filtered = orders.filter((o) => {
+    const matchSearch =
+      o.order_number.toLowerCase().includes(search.toLowerCase()) ||
+      o.product_name.toLowerCase().includes(search.toLowerCase()) ||
+      (o.customer_name && o.customer_name.toLowerCase().includes(search.toLowerCase())) ||
+      (o.customer_whatsapp && o.customer_whatsapp.includes(search));
+    const matchStatus = statusFilter === "all" || o.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            Kelola Pesanan
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Pantau dan proses semua transaksi pesanan akun digital dari pelanggan.
-          </p>
-        </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={loadOrders}
-          disabled={isLoading}
-          className="gap-2 self-start sm:self-auto"
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-          <span>Refresh Data</span>
-        </Button>
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+          Kelola Pesanan (Orders)
+        </h1>
+        <p className="text-xs text-muted-foreground font-mono">
+          Daftar transaksi pesanan akun via WhatsApp, update status bayar dan serah terima akun.
+        </p>
       </div>
 
-      {/* Filter & Search Bar */}
-      <Card className="p-4 bg-white border-slate-200 shadow-xs">
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-          {/* Search */}
-          <div className="sm:col-span-6 relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Cari ID Pesanan, Nama, atau No. WA..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 text-xs sm:text-sm"
-            />
-          </div>
-
-          {/* Status Filter */}
-          <div className="sm:col-span-3">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-700 font-medium focus:border-emerald-500 focus:outline-none"
-            >
-              <option value="all">Semua Status Pesanan</option>
-              <option value="pending">Pending</option>
-              <option value="waiting_payment">Waiting Payment</option>
-              <option value="paid">Paid</option>
-              <option value="processing">Processing</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-
-          {/* Payment Filter */}
-          <div className="sm:col-span-3">
-            <select
-              value={paymentFilter}
-              onChange={(e) => setPaymentFilter(e.target.value)}
-              className="w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-700 font-medium focus:border-emerald-500 focus:outline-none"
-            >
-              <option value="all">Semua Status Bayar</option>
-              <option value="unpaid">Belum Bayar (Unpaid)</option>
-              <option value="paid">Lunas (Paid)</option>
-              <option value="pending">Menunggu Verifikasi</option>
-              <option value="refunded">Refund</option>
-            </select>
-          </div>
+      {/* Filter and Search Bar */}
+      <div className="p-4 rounded-2xl bg-card border border-border flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Cari Order ID, Pembeli, Nomor WhatsApp..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 rounded-xl bg-background border border-border text-xs focus:ring-2 focus:ring-primary focus:outline-none"
+          />
         </div>
-      </Card>
+
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+          {[
+            { id: "all", label: "Semua" },
+            { id: "pending", label: "Pending" },
+            { id: "waiting_payment", label: "Menunggu Bayar" },
+            { id: "paid", label: "Lunas" },
+            { id: "completed", label: "Selesai" },
+            { id: "cancelled", label: "Batal" },
+          ].map((st) => (
+            <button
+              key={st.id}
+              onClick={() => setStatusFilter(st.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                statusFilter === st.id
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {st.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Orders Table */}
-      <Card className="overflow-hidden border-slate-200 shadow-xs bg-white">
-        {isLoading ? (
-          <div className="py-16">
-            <LoadingSpinner size="lg" text="Memuat daftar pesanan..." />
-          </div>
-        ) : orders.length === 0 ? (
-          <div className="py-16 text-center">
-            <ShoppingCart className="mx-auto h-12 w-12 text-slate-300" />
-            <h3 className="mt-3 text-sm font-bold text-slate-800">
-              Tidak ada pesanan ditemukan
-            </h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Coba sesuaikan kata kunci pencarian atau filter status Anda.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs sm:text-sm">
-              <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+      <div className="rounded-2xl bg-card border border-border overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-secondary/40 border-b border-border text-muted-foreground font-mono uppercase">
+              <tr>
+                <th className="p-4">Order ID & Tanggal</th>
+                <th className="p-4">Akun MLBB</th>
+                <th className="p-4">Pembeli (Customer)</th>
+                <th className="p-4">Harga Akun</th>
+                <th className="p-4">Pembayaran</th>
+                <th className="p-4">Status Pesanan</th>
+                <th className="p-4 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/60">
+              {filtered.length === 0 ? (
                 <tr>
-                  <th className="px-4 py-3.5">ID Pesanan</th>
-                  <th className="px-4 py-3.5">Pelanggan</th>
-                  <th className="px-4 py-3.5">Produk & Varian</th>
-                  <th className="px-4 py-3.5">Total</th>
-                  <th className="px-4 py-3.5">Pembayaran</th>
-                  <th className="px-4 py-3.5">Status</th>
-                  <th className="px-4 py-3.5">Waktu</th>
-                  <th className="px-4 py-3.5 text-right">Aksi</th>
+                  <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                    Belum ada data pesanan.
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {orders.map((order) => {
-                  const firstItem = order.items && order.items.length > 0 ? order.items[0] : null;
+              ) : (
+                filtered.map((ord) => {
+                  const buyerWaUrl = ord.customer_whatsapp
+                    ? getWhatsAppUrl(
+                        `Halo ${ord.customer_name || "Kak"}, kami dari Admin MLBB Store mengenai Order ${ord.order_number}.`,
+                        ord.customer_whatsapp
+                      )
+                    : "#";
 
                   return (
-                    <tr key={order.id} className="hover:bg-slate-50/70 transition-colors">
-                      {/* Order Number */}
-                      <td className="px-4 py-3.5">
-                        <Link
-                          href={`/admin/orders/${order.id}`}
-                          className="font-bold text-emerald-600 hover:text-emerald-700 hover:underline"
-                        >
-                          {order.orderNumber}
-                        </Link>
+                    <tr key={ord.id} className="hover:bg-secondary/20 transition-colors">
+                      {/* Order Number & Date */}
+                      <td className="p-4 space-y-1 font-mono">
+                        <span className="font-bold text-foreground block">
+                          {ord.order_number}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">
+                          {new Date(ord.created_at).toLocaleDateString("id-ID", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </td>
+
+                      {/* Account Name */}
+                      <td className="p-4 max-w-xs space-y-1">
+                        <span className="font-bold text-foreground block line-clamp-1">
+                          {ord.product_name}
+                        </span>
+                        {ord.customer_note && (
+                          <span className="text-[11px] text-muted-foreground italic line-clamp-1">
+                            Note: &quot;{ord.customer_note}&quot;
+                          </span>
+                        )}
                       </td>
 
                       {/* Customer */}
-                      <td className="px-4 py-3.5">
-                        <div className="font-semibold text-slate-900">
-                          {order.customer?.name || "Customer"}
-                        </div>
-                        {order.customer?.whatsappNumber && (
+                      <td className="p-4 space-y-1">
+                        <span className="font-semibold text-foreground block">
+                          {ord.customer_name || "Guest Buyer"}
+                        </span>
+                        {ord.customer_whatsapp && (
                           <a
-                            href={buildWhatsAppUrl(order.customer.whatsappNumber, `Halo Kak ${order.customer.name || ""}, mengenai pesanan ${order.orderNumber}...`)}
+                            href={buyerWaUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-[11px] text-emerald-700 hover:underline mt-0.5"
+                            className="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 font-mono"
                           >
-                            <MessageCircle className="h-3 w-3" />
-                            <span>{order.customer.whatsappNumber}</span>
+                            <MessageCircle className="w-3 h-3" />
+                            {ord.customer_whatsapp}
                           </a>
                         )}
                       </td>
 
-                      {/* Product */}
-                      <td className="px-4 py-3.5">
-                        <div className="font-medium text-slate-800 line-clamp-1">
-                          {firstItem ? firstItem.productName : "Produk Digital"}
-                        </div>
-                        {firstItem?.variantName && (
-                          <div className="text-[11px] text-slate-500">
-                            Paket: {firstItem.variantName}
-                          </div>
-                        )}
+                      {/* Price */}
+                      <td className="p-4 font-mono font-bold text-emerald-400 text-sm">
+                        {formatIDR(ord.price)}
                       </td>
 
-                      {/* Total */}
-                      <td className="px-4 py-3.5 font-extrabold text-slate-900">
-                        {formatRupiah(order.total)}
+                      {/* Payment Status Dropdown */}
+                      <td className="p-4">
+                        <select
+                          value={ord.payment_status}
+                          onChange={(e) =>
+                            handlePaymentStatusChange(
+                              ord.id,
+                              e.target.value as PaymentStatus
+                            )
+                          }
+                          className={`px-2 py-1 rounded-md text-[11px] font-bold uppercase cursor-pointer border ${
+                            ord.payment_status === "paid"
+                              ? "bg-emerald-950/60 text-emerald-300 border-emerald-700/60"
+                              : ord.payment_status === "pending"
+                              ? "bg-amber-950/60 text-amber-300 border-amber-700/60"
+                              : "bg-zinc-800 text-zinc-300 border-zinc-700"
+                          }`}
+                        >
+                          <option value="unpaid">Unpaid</option>
+                          <option value="pending">Pending</option>
+                          <option value="paid">Paid</option>
+                          <option value="refunded">Refunded</option>
+                        </select>
                       </td>
 
-                      {/* Payment */}
-                      <td className="px-4 py-3.5">
-                        {getPaymentBadge(order.paymentStatus)}
+                      {/* Order Status Dropdown */}
+                      <td className="p-4">
+                        <select
+                          value={ord.status}
+                          onChange={(e) =>
+                            handleStatusChange(ord.id, e.target.value as OrderStatus)
+                          }
+                          className={`px-2 py-1 rounded-md text-[11px] font-bold uppercase cursor-pointer border ${
+                            ord.status === "completed"
+                              ? "bg-emerald-950/60 text-emerald-300 border-emerald-700/60"
+                              : ord.status === "paid" || ord.status === "processing"
+                              ? "bg-blue-950/60 text-blue-300 border-blue-700/60"
+                              : ord.status === "cancelled"
+                              ? "bg-red-950/60 text-red-300 border-red-700/60"
+                              : "bg-amber-950/60 text-amber-300 border-amber-700/60"
+                          }`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="waiting_payment">Waiting Payment</option>
+                          <option value="paid">Paid</option>
+                          <option value="processing">Processing</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
                       </td>
 
-                      {/* Order Status */}
-                      <td className="px-4 py-3.5">
-                        {getStatusBadge(order.status)}
-                      </td>
-
-                      {/* Date */}
-                      <td className="px-4 py-3.5 text-xs text-slate-500 whitespace-nowrap">
-                        {formatDate(order.createdAt)}
-                      </td>
-
-                      {/* Action */}
-                      <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                        <Link href={`/admin/orders/${order.id}`}>
-                          <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
-                            <Eye className="h-3.5 w-3.5" />
-                            <span>Detail</span>
-                          </Button>
+                      {/* Actions */}
+                      <td className="p-4 text-right">
+                        <Link
+                          href={`/admin/orders/${ord.id}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 text-xs font-semibold"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Detail</span>
                         </Link>
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

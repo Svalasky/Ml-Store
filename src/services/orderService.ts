@@ -1,498 +1,282 @@
-﻿import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { Order, OrderFilterOptions, CreateOrderPayload, OrderStatus, PaymentStatus } from "@/types/order";
-import { DashboardStats } from "@/types/admin";
-import { productService } from "./productService";
+import { createClient } from "@/lib/supabase/client";
+import { Order, OrderStatus, PaymentStatus, CreateOrderPayload } from "@/types/order";
+import { generateOrderNumber } from "@/lib/whatsapp";
+import { env } from "@/config/env";
 
-// Helper to format ID
-function generateFallbackOrderNumber() {
-  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-  return `ORD-${dateStr}-${randomSuffix}`;
-}
+const isSupabaseConfigured = () => {
+  return (
+    Boolean(env.supabaseUrl) &&
+    !env.supabaseUrl.includes("placeholder") &&
+    Boolean(env.supabaseAnonKey) &&
+    !env.supabaseAnonKey.includes("placeholder")
+  );
+};
 
-const LOCAL_ORDERS_KEY = "mole_store_orders";
-
-function getLocalOrders(): Order[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(LOCAL_ORDERS_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch (e) {
-    console.error("Failed to parse local orders", e);
-  }
-  return [];
-}
-
-function saveLocalOrders(orders: Order[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(LOCAL_ORDERS_KEY, JSON.stringify(orders));
-  } catch (e) {
-    console.error("Failed to save local orders", e);
-  }
-}
-
-export const orderService = {
-  async createOrder(payload: CreateOrderPayload): Promise<{
-    orderId: string;
-    orderNumber: string;
-    total: number;
-    productName: string;
-    variantName?: string;
-  }> {
-    const supabase = getSupabaseBrowserClient();
-
-    // 1. Try Supabase RPC
-    if (supabase) {
-      try {
-        const { data, error } = await supabase.rpc("create_whatsapp_order", {
-          p_customer_name: payload.customerName,
-          p_whatsapp_number: payload.whatsappNumber,
-          p_product_id: payload.productId,
-          p_variant_id: payload.variantId || undefined,
-          p_customer_note: payload.customerNote || undefined,
-          p_discount_code: payload.discountCode || undefined,
-        });
-
-        if (!error && data && data.length > 0) {
-          const res = data[0];
-          return {
-            orderId: res.order_id,
-            orderNumber: res.order_number,
-            total: Number(res.total),
-            productName: res.product_name,
-            variantName: res.variant_name || undefined,
-          };
-        }
-        console.warn("RPC create_whatsapp_order fallback to client query:", error?.message);
-      } catch (rpcErr) {
-        console.warn("RPC error:", rpcErr);
-      }
-    }
-
-    // 2. Fallback direct or local order creation
-    const product = await productService.getById(payload.productId);
-    const variant = payload.variantId && product?.variants
-      ? product.variants.find((v) => v.id === payload.variantId)
-      : undefined;
-
-    const productName = product ? product.name : "Produk Digital";
-    const variantName = variant ? variant.name : undefined;
-    const price = variant ? variant.price : (product ? product.price : 0);
-    const orderNumber = generateFallbackOrderNumber();
-    const orderId = `ord-${Date.now()}`;
-
-    const newOrder: Order = {
-      id: orderId,
-      orderNumber,
-      customer: {
-        id: `cust-${Date.now()}`,
-        name: payload.customerName,
-        whatsappNumber: payload.whatsappNumber,
-        email: payload.customerEmail,
+let localOrders: Order[] = [
+  {
+    id: "ord-1",
+    order_number: "ORD-20260925-1001",
+    product_id: "a0000000-0000-0000-0000-000000000000",
+    product_name: "MLBB Akun All-Star Sultan - 15 Collector + 4 Legend",
+    price: 3200000,
+    status: "completed",
+    payment_status: "paid",
+    customer_name: "Aldo Saputra",
+    customer_whatsapp: "081299887766",
+    customer_note: "Mohon diproses cepat untuk kado turnamen.",
+    admin_note: "Data akun sudah diserahkan dan email diganti ke pembeli.",
+    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+    updated_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+    history: [
+      {
+        id: "h-1",
+        order_id: "ord-1",
+        status: "pending",
+        notes: "Order dibuat via WhatsApp",
+        created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
       },
-      subtotal: price,
-      discount: 0,
-      total: price,
-      status: "pending",
-      paymentStatus: "unpaid",
-      paymentMethod: "whatsapp",
-      customerNote: payload.customerNote,
-      items: [
-        {
-          id: `item-${Date.now()}`,
-          orderId,
-          productId: payload.productId,
-          variantId: payload.variantId,
-          productName,
-          variantName,
-          price,
-          quantity: 1,
-          subtotal: price,
-        },
-      ],
-      history: [
-        {
-          id: `hist-${Date.now()}`,
-          orderId,
-          newStatus: "pending",
-          note: "Order dibuat melalui WhatsApp Checkout",
-          createdAt: new Date().toISOString(),
-        },
-      ],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const current = getLocalOrders();
-    saveLocalOrders([newOrder, ...current]);
-
-    return {
-      orderId,
-      orderNumber,
-      total: price,
-      productName,
-      variantName,
-    };
+      {
+        id: "h-2",
+        order_id: "ord-1",
+        status: "paid",
+        notes: "Pembayaran transfer bank diterima",
+        created_at: new Date(Date.now() - 86400000 * 2 + 1800000).toISOString(),
+      },
+      {
+        id: "h-3",
+        order_id: "ord-1",
+        status: "completed",
+        notes: "Serah terima data Moonton dan Gmail selesai",
+        created_at: new Date(Date.now() - 86400000 * 2 + 3600000).toISOString(),
+      },
+    ],
   },
-
-  async getAll(options: OrderFilterOptions = {}): Promise<Order[]> {
-    const supabase = getSupabaseBrowserClient();
-
-    if (supabase) {
-      try {
-        let query = supabase
-          .from("orders")
-          .select(`
-            id,
-            order_number,
-            customer_id,
-            subtotal,
-            discount,
-            total,
-            status,
-            payment_status,
-            payment_method,
-            customer_note,
-            admin_note,
-            created_at,
-            updated_at,
-            customer:customers(id, name, whatsapp_number, email),
-            items:order_items(id, order_id, product_id, variant_id, product_name, variant_name, price, quantity, subtotal),
-            history:order_status_history(id, order_id, old_status, new_status, note, created_at)
-          `)
-          .order("created_at", { ascending: false });
-
-        if (options.status && options.status !== "all") {
-          query = query.eq("status", options.status);
-        }
-        if (options.paymentStatus && options.paymentStatus !== "all") {
-          query = query.eq("payment_status", options.paymentStatus);
-        }
-        if (options.startDate) {
-          query = query.gte("created_at", options.startDate);
-        }
-        if (options.endDate) {
-          query = query.lte("created_at", options.endDate);
-        }
-
-        const { data, error } = await query;
-
-        if (!error && data) {
-          let list: Order[] = data.map((o: any) => ({
-            id: o.id,
-            orderNumber: o.order_number,
-            customerId: o.customer_id,
-            customer: o.customer
-              ? {
-                  id: o.customer.id,
-                  name: o.customer.name,
-                  whatsappNumber: o.customer.whatsapp_number,
-                  email: o.customer.email,
-                }
-              : undefined,
-            subtotal: Number(o.subtotal),
-            discount: Number(o.discount),
-            total: Number(o.total),
-            status: o.status as OrderStatus,
-            paymentStatus: o.payment_status as PaymentStatus,
-            paymentMethod: o.payment_method,
-            customerNote: o.customer_note,
-            adminNote: o.admin_note,
-            items: o.items?.map((item: any) => ({
-              id: item.id,
-              orderId: item.order_id,
-              productId: item.product_id,
-              variantId: item.variant_id,
-              productName: item.product_name,
-              variantName: item.variant_name,
-              price: Number(item.price),
-              quantity: item.quantity,
-              subtotal: Number(item.subtotal),
-            })),
-            history: o.history?.map((h: any) => ({
-              id: h.id,
-              orderId: h.order_id,
-              oldStatus: h.old_status,
-              newStatus: h.new_status,
-              note: h.note,
-              createdAt: h.created_at,
-            })),
-            createdAt: o.created_at,
-            updatedAt: o.updated_at,
-          }));
-
-          if (options.search) {
-            const s = options.search.toLowerCase();
-            list = list.filter(
-              (o) =>
-                o.orderNumber.toLowerCase().includes(s) ||
-                o.customer?.name?.toLowerCase().includes(s) ||
-                o.customer?.whatsappNumber.includes(s) ||
-                o.items?.some((i) => i.productName.toLowerCase().includes(s))
-            );
-          }
-
-          return list;
-        }
-      } catch (err) {
-        console.error("Supabase order fetch error:", err);
-      }
-    }
-
-    // Fallback to local
-    let local = getLocalOrders();
-    if (options.status && options.status !== "all") {
-      local = local.filter((o) => o.status === options.status);
-    }
-    if (options.paymentStatus && options.paymentStatus !== "all") {
-      local = local.filter((o) => o.paymentStatus === options.paymentStatus);
-    }
-    if (options.search) {
-      const s = options.search.toLowerCase();
-      local = local.filter(
-        (o) =>
-          o.orderNumber.toLowerCase().includes(s) ||
-          o.customer?.name?.toLowerCase().includes(s) ||
-          o.customer?.whatsappNumber.includes(s)
-      );
-    }
-    return local;
+  {
+    id: "ord-2",
+    order_number: "ORD-20260925-1002",
+    product_id: "a2222222-2222-2222-2222-222222222222",
+    product_name: "MLBB Semi-Sultan - 5 Collector + 2 Legend",
+    price: 1200000,
+    status: "waiting_payment",
+    payment_status: "pending",
+    customer_name: "Rizky Ramadhan",
+    customer_whatsapp: "085711223344",
+    customer_note: "Mau bayar lewat QRIS / BCA",
+    admin_note: "Menunggu bukti transfer",
+    created_at: new Date(Date.now() - 3600000 * 4).toISOString(),
+    updated_at: new Date(Date.now() - 3600000 * 4).toISOString(),
+    history: [
+      {
+        id: "h-21",
+        order_id: "ord-2",
+        status: "pending",
+        notes: "Order dibuat via WhatsApp",
+        created_at: new Date(Date.now() - 3600000 * 4).toISOString(),
+      },
+      {
+        id: "h-22",
+        order_id: "ord-2",
+        status: "waiting_payment",
+        notes: "Menunggu pembayaran dari buyer",
+        created_at: new Date(Date.now() - 3600000 * 3).toISOString(),
+      },
+    ],
   },
+];
 
-  async getById(id: string): Promise<Order | null> {
-    const supabase = getSupabaseBrowserClient();
-    if (supabase) {
-      try {
-        const { data, error } = await supabase
-          .from("orders")
-          .select(`
-            id,
-            order_number,
-            customer_id,
-            subtotal,
-            discount,
-            total,
-            status,
-            payment_status,
-            payment_method,
-            customer_note,
-            admin_note,
-            created_at,
-            updated_at,
-            customer:customers(id, name, whatsapp_number, email),
-            items:order_items(id, order_id, product_id, variant_id, product_name, variant_name, price, quantity, subtotal),
-            history:order_status_history(id, order_id, old_status, new_status, note, created_at)
-          `)
-          .eq("id", id)
-          .single();
+export async function createOrder(payload: CreateOrderPayload): Promise<Order> {
+  const orderNumber = generateOrderNumber();
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
 
-        if (!error && data) {
-          return {
-            id: data.id,
-            orderNumber: data.order_number,
-            customerId: data.customer_id,
-            customer: data.customer
-              ? {
-                  id: (data.customer as any).id,
-                  name: (data.customer as any).name,
-                  whatsappNumber: (data.customer as any).whatsapp_number,
-                  email: (data.customer as any).email,
-                }
-              : undefined,
-            subtotal: Number(data.subtotal),
-            discount: Number(data.discount),
-            total: Number(data.total),
-            status: data.status as OrderStatus,
-            paymentStatus: data.payment_status as PaymentStatus,
-            paymentMethod: data.payment_method,
-            customerNote: data.customer_note,
-            adminNote: data.admin_note,
-            items: (data.items as any[])?.map((item) => ({
-              id: item.id,
-              orderId: item.order_id,
-              productId: item.product_id,
-              variantId: item.variant_id,
-              productName: item.product_name,
-              variantName: item.variant_name,
-              price: Number(item.price),
-              quantity: item.quantity,
-              subtotal: Number(item.subtotal),
-            })),
-            history: (data.history as any[])
-              ?.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-              .map((h) => ({
-                id: h.id,
-                orderId: h.order_id,
-                oldStatus: h.old_status,
-                newStatus: h.new_status,
-                note: h.note,
-                createdAt: h.created_at,
-              })),
-            createdAt: data.created_at,
-            updatedAt: data.updated_at,
-          };
-        }
-      } catch (e) {
-        console.error("Order fetch detail error:", e);
+  const newOrder: Order = {
+    id,
+    order_number: orderNumber,
+    product_id: payload.product_id,
+    product_name: payload.product_name,
+    price: payload.price,
+    status: "pending",
+    payment_status: "unpaid",
+    customer_name: payload.customer_name,
+    customer_whatsapp: payload.customer_whatsapp,
+    customer_note: payload.customer_note,
+    created_at: now,
+    updated_at: now,
+    history: [
+      {
+        id: crypto.randomUUID(),
+        order_id: id,
+        status: "pending",
+        notes: "Order dibuat via WhatsApp Checkout",
+        created_at: now,
+      },
+    ],
+  };
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient();
+      // Optional customer record
+      let customerId: string | undefined;
+      const { data: custData } = await supabase
+        .from("customers")
+        .insert({
+          name: payload.customer_name,
+          whatsapp_number: payload.customer_whatsapp,
+        })
+        .select("id")
+        .single();
+
+      if (custData) {
+        customerId = custData.id;
       }
-    }
 
-    const local = getLocalOrders();
-    return local.find((o) => o.id === id || o.orderNumber === id) || null;
-  },
-
-  async updateStatus(
-    orderId: string,
-    newStatus: OrderStatus,
-    paymentStatus?: PaymentStatus,
-    adminNote?: string,
-    historyNote?: string
-  ): Promise<boolean> {
-    const supabase = getSupabaseBrowserClient();
-
-    if (supabase) {
-      try {
-        const { data, error } = await supabase.rpc("update_order_status", {
-          p_order_id: orderId,
-          p_new_status: newStatus,
-          p_payment_status: paymentStatus || undefined,
-          p_admin_note: adminNote || undefined,
-          p_note: historyNote || undefined,
-        });
-
-        if (!error && data) return true;
-      } catch (err) {
-        console.error("Update order status RPC error:", err);
-      }
-    }
-
-    // Fallback local update
-    const list = getLocalOrders();
-    const idx = list.findIndex((o) => o.id === orderId);
-    if (idx !== -1) {
-      const oldStatus = list[idx].status;
-      list[idx].status = newStatus;
-      if (paymentStatus) list[idx].paymentStatus = paymentStatus;
-      if (adminNote !== undefined) list[idx].adminNote = adminNote;
-      list[idx].updatedAt = new Date().toISOString();
-
-      if (!list[idx].history) list[idx].history = [];
-      list[idx].history!.push({
-        id: `hist-${Date.now()}`,
-        orderId,
-        oldStatus,
-        newStatus,
-        note: historyNote || `Status diubah menjadi ${newStatus}`,
-        createdAt: new Date().toISOString(),
+      await supabase.from("orders").insert({
+        id,
+        order_number: orderNumber,
+        product_id: payload.product_id,
+        customer_id: customerId,
+        product_name: payload.product_name,
+        price: payload.price,
+        status: "pending",
+        payment_status: "unpaid",
+        customer_name: payload.customer_name,
+        customer_whatsapp: payload.customer_whatsapp,
+        customer_note: payload.customer_note,
+        created_at: now,
+        updated_at: now,
       });
 
-      saveLocalOrders(list);
-      return true;
+      await supabase.from("order_status_history").insert({
+        order_id: id,
+        status: "pending",
+        notes: "Order dibuat via WhatsApp Checkout",
+        created_at: now,
+      });
+    } catch (e) {
+      console.warn("Error creating order in Supabase:", e);
     }
-    return false;
-  },
+  }
 
-  async getDashboardStats(): Promise<DashboardStats> {
-    const orders = await this.getAll();
-    const products = await productService.getAll();
+  localOrders.unshift(newOrder);
+  return newOrder;
+}
 
-    const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
-    const thisMonthStr = now.toISOString().slice(0, 7);
+export async function getOrders(): Promise<Order[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("orders")
+        .select(
+          `
+          *,
+          history:order_status_history(*),
+          product:products(id, slug, rank, skin_count, collector_count, legend_count)
+        `
+        )
+        .order("created_at", { ascending: false });
 
-    let totalOrders = orders.length;
-    let pendingOrders = 0;
-    let completedOrders = 0;
-    let cancelledOrders = 0;
-    let todayRevenue = 0;
-    let thisMonthRevenue = 0;
-
-    const salesByDayMap: Record<string, { amount: number; count: number }> = {};
-    const productSalesMap: Record<string, { name: string; salesCount: number; revenue: number }> = {};
-
-    // Initialize last 7 days keys
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const k = d.toISOString().slice(0, 10);
-      salesByDayMap[k] = { amount: 0, count: 0 };
-    }
-
-    orders.forEach((o) => {
-      const orderDate = o.createdAt.slice(0, 10);
-      const isPaidOrCompleted = o.paymentStatus === "paid" || o.status === "completed";
-
-      if (o.status === "pending") pendingOrders++;
-      if (o.status === "completed") completedOrders++;
-      if (o.status === "cancelled") cancelledOrders++;
-
-      if (isPaidOrCompleted) {
-        if (orderDate === todayStr) {
-          todayRevenue += o.total;
-        }
-        if (orderDate.startsWith(thisMonthStr)) {
-          thisMonthRevenue += o.total;
-        }
-        if (salesByDayMap[orderDate]) {
-          salesByDayMap[orderDate].amount += o.total;
-          salesByDayMap[orderDate].count += 1;
-        }
-
-        // Product stats
-        o.items?.forEach((item) => {
-          const pId = item.productId || item.productName;
-          if (!productSalesMap[pId]) {
-            productSalesMap[pId] = {
-              name: item.productName,
-              salesCount: 0,
-              revenue: 0,
-            };
-          }
-          productSalesMap[pId].salesCount += item.quantity;
-          productSalesMap[pId].revenue += item.subtotal;
-        });
+      if (!error && data && data.length > 0) {
+        return data;
       }
+    } catch (e) {
+      console.warn("Supabase orders query fallback to local:", e);
+    }
+  }
+
+  return localOrders;
+}
+
+export async function getOrderById(id: string): Promise<Order | null> {
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("orders")
+        .select(
+          `
+          *,
+          history:order_status_history(*),
+          product:products(*)
+        `
+        )
+        .eq("id", id)
+        .single();
+
+      if (!error && data) {
+        return data;
+      }
+    } catch (e) {
+      console.warn("Supabase getOrderById fallback:", e);
+    }
+  }
+
+  return localOrders.find((o) => o.id === id || o.order_number === id) || null;
+}
+
+export async function updateOrderStatus(
+  orderId: string,
+  status: OrderStatus,
+  notes?: string
+): Promise<void> {
+  const now = new Date().toISOString();
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient();
+      await supabase
+        .from("orders")
+        .update({ status, updated_at: now })
+        .eq("id", orderId);
+
+      await supabase.from("order_status_history").insert({
+        order_id: orderId,
+        status,
+        notes: notes || `Status diubah menjadi ${status}`,
+        created_at: now,
+      });
+    } catch (e) {
+      console.warn("Failed updating order status in Supabase:", e);
+    }
+  }
+
+  const order = localOrders.find((o) => o.id === orderId);
+  if (order) {
+    order.status = status;
+    order.updated_at = now;
+    if (!order.history) order.history = [];
+    order.history.unshift({
+      id: crypto.randomUUID(),
+      order_id: orderId,
+      status,
+      notes: notes || `Status diubah menjadi ${status}`,
+      created_at: now,
     });
+  }
+}
 
-    const salesLast7Days = Object.entries(salesByDayMap).map(([date, val]) => ({
-      date: date.slice(5), // MM-DD
-      amount: val.amount,
-      count: val.count,
-    }));
+export async function updatePaymentStatus(
+  orderId: string,
+  paymentStatus: PaymentStatus
+): Promise<void> {
+  const now = new Date().toISOString();
 
-    const topSellingProducts = Object.entries(productSalesMap)
-      .map(([id, val]) => ({
-        id,
-        name: val.name,
-        salesCount: val.salesCount,
-        revenue: val.revenue,
-      }))
-      .sort((a, b) => b.salesCount - a.salesCount)
-      .slice(0, 5);
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient();
+      await supabase
+        .from("orders")
+        .update({ payment_status: paymentStatus, updated_at: now })
+        .eq("id", orderId);
+    } catch (e) {
+      console.warn("Failed updating payment status in Supabase:", e);
+    }
+  }
 
-    const outOfStockProducts = products.filter((p) => p.status === "out_of_stock").length;
-
-    const ordersByStatus = [
-      { status: "Pending", count: pendingOrders, color: "#f59e0b" },
-      { status: "Processing", count: orders.filter((o) => o.status === "processing").length, color: "#3b82f6" },
-      { status: "Completed", count: completedOrders, color: "#10b981" },
-      { status: "Cancelled", count: cancelledOrders, color: "#ef4444" },
-    ];
-
-    return {
-      totalOrders,
-      pendingOrders,
-      completedOrders,
-      cancelledOrders,
-      todayRevenue,
-      thisMonthRevenue,
-      totalProducts: products.length,
-      outOfStockProducts,
-      salesLast7Days,
-      salesLast30Days: salesLast7Days, // can expand if needed
-      ordersByStatus,
-      topSellingProducts,
-    };
-  },
-};
+  const order = localOrders.find((o) => o.id === orderId);
+  if (order) {
+    order.payment_status = paymentStatus;
+    order.updated_at = now;
+  }
+}

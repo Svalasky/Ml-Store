@@ -1,67 +1,65 @@
 import React from "react";
-import { Zap, ShieldCheck, Headphones, Wallet, CheckCircle } from "lucide-react";
+import { ShieldCheck, Zap, HeartHandshake, RefreshCw, Lock, Sparkles } from "lucide-react";
 
 export function WhyChooseUs() {
-  const perks = [
+  const benefits = [
     {
-      icon: <Zap className="h-6 w-6 text-amber-500" />,
-      title: "Proses Cepat 1-5 Menit",
-      description:
-        "Tidak perlu menunggu lama. Begitu bukti pembayaran Anda kirimkan ke WhatsApp, akun langsung disiapkan dan dikirim seketika.",
+      icon: ShieldCheck,
+      color: "text-emerald-400 bg-emerald-950/40 border-emerald-800/40",
+      title: "Garansi Anti Hack-Back",
+      desc: "Semua akun Mobile Legends dijamin aman dengan garansi anti hack-back. Data pembeli terlindungi 100%.",
     },
     {
-      icon: <ShieldCheck className="h-6 w-6 text-emerald-600" />,
-      title: "100% Legal & Bergaransi",
-      description:
-        "Semua akun diperoleh dari sumber resmi. Kami memberikan jaminan Full Replace jika ada kendala selama masa aktif berlangsung.",
+      icon: Zap,
+      color: "text-amber-400 bg-amber-950/40 border-amber-800/40",
+      title: "Proses Cepat 5 Menit",
+      desc: "Setelah order dan konfirmasi pembayaran via WhatsApp, admin langsung memberikan data akun tanpa menunggu lama.",
     },
     {
-      icon: <Wallet className="h-6 w-6 text-blue-600" />,
-      title: "Harga Paling Terjangkau",
-      description:
-        "Dapatkan harga hemat hingga 80% dibandingkan berlangganan harga normal kartu kredit perseorangan tanpa biaya admin tambahan.",
+      icon: Lock,
+      color: "text-purple-400 bg-purple-950/40 border-purple-800/40",
+      title: "Moonton Sepaket & All Unbind",
+      desc: "Akun diserahkan lengkap dengan akses Gmail/Email awal dan semua sosial media pihak ketiga sudah di-unbind bersih.",
     },
     {
-      icon: <Headphones className="h-6 w-6 text-purple-600" />,
-      title: "Customer Support Ramah",
-      description:
-        "Admin kami siap melayani dan memandu Anda dari awal pemilihan akun sampai cara login ke aplikasi dengan sabar dan responsif.",
+      icon: HeartHandshake,
+      color: "text-blue-400 bg-blue-950/40 border-blue-800/40",
+      title: "Dipandu Sampai Tuntas",
+      desc: "Admin mendampingi proses perubahan email, password, hingga pengaktifan verifikasi sekunder akun pribadi pembeli.",
     },
   ];
 
   return (
-    <section className="py-16 md:py-20 bg-slate-900 text-white relative overflow-hidden">
-      <div className="absolute top-0 right-1/4 w-96 h-96 bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
-
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-14">
-          <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-3.5 py-1.5 rounded-full border border-emerald-800">
-            Mengapa Memilih Kami
-          </span>
-          <h2 className="mt-3 text-2xl sm:text-4xl font-extrabold tracking-tight">
-            Keunggulan Belanja di Toko Kami
-          </h2>
-          <p className="mt-2 text-sm sm:text-base text-slate-400">
-            Kami memprioritaskan keamanan, kenyamanan, dan kepuasan setiap pelanggan akun digital.
-          </p>
+    <section id="benefits" className="space-y-8 scroll-mt-24">
+      <div className="text-center max-w-2xl mx-auto space-y-2">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary text-xs font-semibold text-muted-foreground">
+          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+          <span>KEUNGGULAN TOKO KAMI</span>
         </div>
+        <h2 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
+          Kenapa Harus Beli Akun MLBB di Sini?
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Kami mengutamakan keamanan dan kepuasan pembeli dengan standar keamanan tertinggi di Indonesia.
+        </p>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {perks.map((perk, idx) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {benefits.map((b, idx) => {
+          const Icon = b.icon;
+          return (
             <div
               key={idx}
-              className="rounded-2xl border border-slate-800 bg-slate-800/40 p-6 backdrop-blur-sm hover:border-slate-700 transition-colors"
+              className="p-6 rounded-2xl bg-card border border-border/80 space-y-3 hover:border-primary/50 transition-all shadow-sm"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-800 border border-slate-700 mb-4">
-                {perk.icon}
+              <div className={`w-12 h-12 rounded-xl border flex items-center justify-center ${b.color}`}>
+                <Icon className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">{perk.title}</h3>
-              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                {perk.description}
-              </p>
+              <h3 className="font-bold text-foreground text-base">{b.title}</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">{b.desc}</p>
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
     </section>
   );

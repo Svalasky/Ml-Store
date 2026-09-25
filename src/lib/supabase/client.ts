@@ -1,27 +1,13 @@
-﻿import { createBrowserClient } from "@supabase/ssr";
+import { createClient as createSupabaseJsClient } from "@supabase/supabase-js";
+import { env } from "@/config/env";
 
+/**
+ * Universal Supabase client using @supabase/supabase-js.
+ * Safe to import and call in both Server Components and Client Components.
+ */
 export function createClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    return null;
-  }
-
-  return createBrowserClient(supabaseUrl, supabaseAnonKey);
-}
-
-// Singleton helper for simple browser usage
-let clientInstance: ReturnType<typeof createBrowserClient> | null = null;
-
-export function getSupabaseBrowserClient() {
-  if (typeof window === "undefined") return null;
-  if (!clientInstance) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (supabaseUrl && supabaseAnonKey) {
-      clientInstance = createBrowserClient(supabaseUrl, supabaseAnonKey);
-    }
-  }
-  return clientInstance;
+  return createSupabaseJsClient(
+    env.supabaseUrl || "https://placeholder.supabase.co",
+    env.supabaseAnonKey || "placeholder-key"
+  );
 }

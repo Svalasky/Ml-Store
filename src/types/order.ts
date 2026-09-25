@@ -1,4 +1,4 @@
-﻿export type OrderStatus =
+export type OrderStatus =
   | "pending"
   | "waiting_payment"
   | "paid"
@@ -8,74 +8,57 @@
 
 export type PaymentStatus = "unpaid" | "pending" | "paid" | "refunded";
 
-export type PaymentMethod = "whatsapp" | "manual_transfer" | "other";
+export interface OrderStatusHistory {
+  id: string;
+  order_id: string;
+  status: OrderStatus;
+  notes?: string;
+  created_at: string;
+}
 
 export interface Customer {
   id: string;
-  name?: string;
-  whatsappNumber: string;
+  name: string;
+  whatsapp_number: string;
   email?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface OrderItem {
-  id: string;
-  orderId: string;
-  productId?: string;
-  variantId?: string;
-  productName: string;
-  variantName?: string;
-  price: number;
-  quantity: number;
-  subtotal: number;
-  createdAt?: string;
-}
-
-export interface OrderStatusHistory {
-  id: string;
-  orderId: string;
-  oldStatus?: string;
-  newStatus: OrderStatus;
-  note?: string;
-  changedBy?: string;
-  createdAt: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Order {
   id: string;
-  orderNumber: string; // e.g. ORD-20260925-0001
-  customerId?: string;
-  customer?: Customer;
-  subtotal: number;
-  discount: number;
-  total: number;
+  order_number: string;
+  product_id?: string;
+  customer_id?: string;
+  product_name: string;
+  price: number;
   status: OrderStatus;
-  paymentStatus: PaymentStatus;
-  paymentMethod: PaymentMethod;
-  customerNote?: string;
-  adminNote?: string;
-  items?: OrderItem[];
+  payment_status: PaymentStatus;
+  customer_name?: string;
+  customer_whatsapp?: string;
+  customer_note?: string;
+  admin_note?: string;
+  created_at: string;
+  updated_at: string;
+  
+  // Relations
   history?: OrderStatusHistory[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface OrderFilterOptions {
-  search?: string; // order number, customer name, phone
-  status?: OrderStatus | "all";
-  paymentStatus?: PaymentStatus | "all";
-  startDate?: string;
-  endDate?: string;
-  sortBy?: "newest" | "oldest" | "total_desc" | "total_asc";
+  product?: {
+    id: string;
+    slug: string;
+    rank?: string;
+    skin_count?: number;
+    collector_count?: number;
+    legend_count?: number;
+    primary_image?: string;
+  };
 }
 
 export interface CreateOrderPayload {
-  customerName: string;
-  whatsappNumber: string;
-  customerEmail?: string;
-  productId: string;
-  variantId?: string;
-  customerNote?: string;
-  discountCode?: string;
+  product_id: string;
+  product_name: string;
+  price: number;
+  customer_name: string;
+  customer_whatsapp: string;
+  customer_note?: string;
 }

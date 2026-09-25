@@ -1,63 +1,99 @@
-﻿export type ProductStatus = "available" | "out_of_stock" | "inactive";
-export type AccountStatus = "available" | "reserved" | "sold" | "expired" | "disabled";
+export type AccountStatus = "available" | "reserved" | "sold" | "inactive";
 
-export interface ProductVariant {
+export type SkinType =
+  | "collector"
+  | "legend"
+  | "epic"
+  | "special"
+  | "elite"
+  | "season"
+  | "other";
+
+export type MLRank =
+  | "Warrior"
+  | "Elite"
+  | "Master"
+  | "Grandmaster"
+  | "Epic"
+  | "Legend"
+  | "Mythic"
+  | "Mythical Honor"
+  | "Mythical Glory"
+  | "Mythical Immortal";
+
+export interface ProductImage {
   id: string;
-  productId: string;
-  name: string; // e.g. "1 Bulan", "3 Bulan", "Lifetime"
-  description?: string;
-  price: number;
-  originalPrice?: number;
-  duration?: string;
-  stock: number;
-  status: ProductStatus;
-  createdAt?: string;
-  updatedAt?: string;
+  product_id: string;
+  image_url: string;
+  sort_order: number;
+  is_primary: boolean;
+  created_at?: string;
 }
 
-export interface DigitalAccount {
+export interface ProductSkin {
   id: string;
-  variantId: string;
-  username?: string;
-  credentialReference?: string;
-  status: AccountStatus;
-  expiresAt?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  product_id: string;
+  skin_name: string;
+  hero_name?: string;
+  skin_type: SkinType;
+  image_url?: string;
+  created_at?: string;
 }
 
-export interface InventoryItem {
+export interface ProductHero {
   id: string;
-  variantId: string;
-  quantity: number;
-  reservedQuantity: number;
-  availableStock: number;
-  updatedAt?: string;
+  product_id: string;
+  hero_name: string;
+  created_at?: string;
 }
 
 export interface Product {
   id: string;
   name: string;
   slug: string;
-  categoryId: string;
-  description: string;
-  shortDescription?: string;
+  description?: string;
   price: number;
-  originalPrice?: number;
-  image: string; // mapped to image_url
-  duration?: string; // e.g. "1 Bulan", "1 Tahun", "Lifetime"
-  features: string[];
-  status: ProductStatus;
+  original_price?: number;
+  status: AccountStatus;
   featured: boolean;
-  terms?: string[];
-  variants?: ProductVariant[];
-  createdAt: string;
-  updatedAt: string;
+  
+  // Account Information
+  level?: number;
+  rank?: string;
+  server?: string;
+  battle_id?: string;
+  win_rate?: number;
+  total_matches?: number;
+  
+  // Account Content Breakdown
+  hero_count: number;
+  skin_count: number;
+  collector_count: number;
+  legend_count: number;
+  epic_count: number;
+  special_count: number;
+  elite_count: number;
+  season_skin_count: number;
+  
+  terms?: string;
+  created_at?: string;
+  updated_at?: string;
+
+  // Joined Relations
+  images?: ProductImage[];
+  skins?: ProductSkin[];
+  heroes?: ProductHero[];
+  primary_image?: string;
 }
 
-export type ProductFilterOptions = {
+export interface ProductFilterOptions {
   search?: string;
-  categoryId?: string;
-  status?: string;
-  sortBy?: "price_asc" | "price_desc" | "newest" | "name_asc";
-};
+  rank?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  minSkins?: number;
+  minCollector?: number;
+  minLegend?: number;
+  status?: AccountStatus | "all";
+  sortBy?: "newest" | "price_asc" | "price_desc" | "skins_desc" | "winrate_desc";
+}

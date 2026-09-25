@@ -1,81 +1,62 @@
-﻿"use client";
+"use client";
 
-import React from "react";
-import Image from "next/image";
-import { Star, Quote, CheckCircle } from "lucide-react";
-import { useStore } from "@/context/StoreContext";
+import React, { useState, useEffect } from "react";
+import { Testimonial } from "@/types/database";
+import { getTestimonials } from "@/services/settingService";
+import { Star, MessageSquareQuote, CheckCircle2 } from "lucide-react";
 
 export function TestimonialSection() {
-  const { testimonials } = useStore();
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
 
-  if (!testimonials || testimonials.length === 0) return null;
+  useEffect(() => {
+    getTestimonials().then((data) => {
+      if (data && data.length > 0) setTestimonials(data);
+    });
+  }, []);
+
+  if (testimonials.length === 0) return null;
 
   return (
-    <section className="py-16 md:py-20 bg-slate-50 border-t border-slate-200/80">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-            Ulasan Pelanggan
-          </span>
-          <h2 className="mt-3 text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Dipercaya Ribuan Pelanggan Setiap Bulan
-          </h2>
-          <p className="mt-2 text-sm text-slate-600">
-            Berikut testimoni asli dari pelanggan yang telah berbelanja akun digital di Mole Store.
-          </p>
-        </div>
+    <section id="testimonials" className="space-y-8 scroll-mt-24">
+      <div className="text-center max-w-2xl mx-auto space-y-2">
+        <h2 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
+          Apa Kata Pembeli Kami?
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Ratusan pemain Mobile Legends telah membeli akun impian mereka secara aman dan nyaman.
+        </p>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {testimonials.map((item) => (
-            <div
-              key={item.id}
-              className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-xs hover:shadow-md transition-all"
-            >
-              <div className="space-y-3">
-                {/* Rating stars */}
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`h-4 w-4 ${
-                        i < item.rating
-                          ? "text-amber-400 fill-amber-400"
-                          : "text-slate-200"
-                      }`}
-                    />
-                  ))}
-                </div>
-                <p className="text-sm text-slate-700 leading-relaxed italic">
-                  &ldquo;{item.message}&rdquo;
-                </p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {testimonials.map((t) => (
+          <div
+            key={t.id}
+            className="p-6 rounded-2xl bg-card border border-border space-y-4 flex flex-col justify-between shadow-sm"
+          >
+            <div className="space-y-3">
+              {/* Stars */}
+              <div className="flex items-center gap-1 text-amber-400">
+                {Array.from({ length: t.rating || 5 }).map((_, i) => (
+                  <Star key={i} className="w-4 h-4 fill-amber-400" />
+                ))}
               </div>
 
-              <div className="mt-6 flex items-center gap-3 pt-4 border-t border-slate-100">
-                {item.imageUrl ? (
-                  <div className="relative h-10 w-10 overflow-hidden rounded-full border border-slate-200">
-                    <Image
-                      src={item.imageUrl}
-                      alt={item.customerName}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="h-10 w-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-sm">
-                    {item.customerName.charAt(0)}
-                  </div>
-                )}
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1">
-                    <span>{item.customerName}</span>
-                    <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
-                  </h4>
-                  <span className="text-[11px] text-slate-500">Verified Buyer</span>
-                </div>
-              </div>
+              {/* Message */}
+              <p className="text-sm text-foreground/90 italic leading-relaxed">
+                &ldquo;{t.message}&rdquo;
+              </p>
             </div>
-          ))}
-        </div>
+
+            {/* Customer Info */}
+            <div className="pt-3 border-t border-border/60 flex items-center justify-between text-xs">
+              <span className="font-bold text-foreground">{t.customer_name}</span>
+              <span className="flex items-center gap-1 text-emerald-400 font-semibold font-mono">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Verified Buyer
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );

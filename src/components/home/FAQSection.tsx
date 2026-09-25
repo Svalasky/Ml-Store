@@ -1,73 +1,76 @@
 "use client";
 
 import React, { useState } from "react";
-import { MOCK_FAQS } from "@/data/mock-faqs";
 import { ChevronDown, HelpCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export function FAQSection() {
-  const [openId, setOpenId] = useState<string | null>("faq-1");
+  const [openIndex, setOpenIndex] = useState<number | null>(0);
 
-  const toggle = (id: string) => {
-    setOpenId((prev) => (prev === id ? null : id));
-  };
+  const faqs = [
+    {
+      q: "Bagaimana cara membeli akun Mobile Legends di website ini?",
+      a: "Pilih akun yang Anda inginkan pada katalog, lalu klik tombol 'Beli via WhatsApp'. Masukkan nama dan nomor WhatsApp Anda, lalu sistem akan otomatis membuat Order ID dan membuka chat WhatsApp dengan admin untuk proses transaksi dan serah terima data.",
+    },
+    {
+      q: "Apakah transaksi di toko ini aman dari hack-back?",
+      a: "Sangat aman! Kami memberikan garansi Anti Hack-Back. Semua akun yang dijual berstatus Monsep (Moonton Sepaket) dengan Gmail awal atau All Unbind bersih, sehingga data dapat diganti 100% menjadi milik pembeli.",
+    },
+    {
+      q: "Metode pembayaran apa saja yang diterima?",
+      a: "Kami menerima transfer Bank (BCA, Mandiri, BRI, BNI), E-Wallet (Dana, OVO, GoPay, ShopeePay), serta pembayaran instan via QRIS.",
+    },
+    {
+      q: "Berapa lama proses serah terima akun?",
+      a: "Setelah pembayaran diverifikasi oleh admin via WhatsApp, data akun (Email & Password) akan langsung dikirimkan dalam kurun waktu 5 - 10 menit.",
+    },
+    {
+      q: "Apakah admin akan membantu proses perubahan data akun?",
+      a: "Ya, admin kami akan memandu langkah demi langkah cara mengganti email Moonton, password, hingga mengaktifkan verifikasi 2 langkah untuk memastikan akun Anda 100% aman.",
+    },
+  ];
 
   return (
-    <section id="faq" className="py-16 md:py-20 bg-white">
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 mb-2">
-            <HelpCircle className="h-3.5 w-3.5" />
-            <span>Pusat Bantuan</span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Pertanyaan yang Sering Diajukan
-          </h2>
-          <p className="mt-2 text-sm text-slate-500">
-            Temukan jawaban cepat seputar legalitas, metode pembayaran, dan klaim garansi akun kami.
-          </p>
+    <section id="faq" className="space-y-8 max-w-3xl mx-auto scroll-mt-24">
+      <div className="text-center space-y-2">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary text-xs font-semibold text-muted-foreground">
+          <HelpCircle className="w-3.5 h-3.5 text-primary" />
+          <span>PERTANYAAN UMUM</span>
         </div>
+        <h2 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight">
+          Frequently Asked Questions (FAQ)
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Semua hal yang perlu Anda ketahui seputar pembelian akun Mobile Legends.
+        </p>
+      </div>
 
-        <div className="space-y-3">
-          {MOCK_FAQS.map((faq) => {
-            const isOpen = openId === faq.id;
-            return (
-              <div
-                key={faq.id}
-                className={cn(
-                  "rounded-2xl border transition-all duration-200 overflow-hidden",
-                  isOpen
-                    ? "border-emerald-200 bg-emerald-50/20 shadow-xs"
-                    : "border-slate-200/80 bg-white hover:border-slate-300"
-                )}
+      <div className="space-y-3">
+        {faqs.map((faq, idx) => {
+          const isOpen = openIndex === idx;
+          return (
+            <div
+              key={idx}
+              className="rounded-2xl bg-card border border-border overflow-hidden transition-all"
+            >
+              <button
+                onClick={() => setOpenIndex(isOpen ? null : idx)}
+                className="w-full p-5 text-left flex items-center justify-between gap-4 font-bold text-foreground text-sm sm:text-base hover:bg-secondary/40 transition-colors"
               >
-                <button
-                  onClick={() => toggle(faq.id)}
-                  className="flex w-full items-center justify-between p-5 text-left transition-colors"
-                  aria-expanded={isOpen}
-                >
-                  <span className="text-sm sm:text-base font-bold text-slate-900 pr-4">
-                    {faq.question}
-                  </span>
-                  <div
-                    className={cn(
-                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 transition-transform duration-200",
-                      isOpen && "rotate-180 bg-emerald-100 text-emerald-700"
-                    )}
-                  >
-                    <ChevronDown className="h-4 w-4" />
-                  </div>
-                </button>
-
-                {isOpen && (
-                  <div className="px-5 pb-5 pt-0 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100/60 mt-1">
-                    {faq.answer}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                <span>{faq.q}</span>
+                <ChevronDown
+                  className={`w-4 h-4 text-muted-foreground transition-transform duration-200 shrink-0 ${
+                    isOpen ? "rotate-180 text-primary" : ""
+                  }`}
+                />
+              </button>
+              {isOpen && (
+                <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed border-t border-border/40 pt-3">
+                  {faq.a}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </section>
   );

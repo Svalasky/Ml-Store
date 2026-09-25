@@ -1,251 +1,241 @@
 "use client";
 
-import React, { useState } from "react";
-import { Category } from "@/types/category";
-import { SearchBar } from "@/components/common/SearchBar";
-import { Select } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { LayoutGrid, List, SlidersHorizontal, RotateCcw } from "lucide-react";
+import React from "react";
+import { ProductFilterOptions } from "@/types/product";
+import { Search, SlidersHorizontal, RotateCcw } from "lucide-react";
 
 interface ProductFilterProps {
-  categories: Category[];
-  search: string;
-  onSearchChange: (val: string) => void;
-  selectedCategory: string;
-  onCategoryChange: (catId: string) => void;
-  sortBy: string;
-  onSortChange: (sort: any) => void;
-  statusFilter: string;
-  onStatusChange: (status: string) => void;
-  viewMode: "grid" | "list";
-  onViewModeChange: (mode: "grid" | "list") => void;
-  onReset: () => void;
+  filters: ProductFilterOptions;
+  onFilterChange: (newFilters: ProductFilterOptions) => void;
   totalResults: number;
 }
 
+const RANKS = [
+  "Semua",
+  "Mythical Immortal",
+  "Mythical Glory",
+  "Mythical Honor",
+  "Mythic",
+  "Legend",
+  "Epic",
+];
+
+const PRICE_PRESETS = [
+  { label: "Semua Harga", min: undefined, max: undefined },
+  { label: "< Rp500K", min: undefined, max: 500000 },
+  { label: "Rp500K - Rp1JT", min: 500000, max: 1000000 },
+  { label: "Rp1JT - Rp2JT", min: 1000000, max: 2000000 },
+  { label: "Rp2JT+", min: 2000000, max: undefined },
+];
+
 export function ProductFilter({
-  categories,
-  search,
-  onSearchChange,
-  selectedCategory,
-  onCategoryChange,
-  sortBy,
-  onSortChange,
-  statusFilter,
-  onStatusChange,
-  viewMode,
-  onViewModeChange,
-  onReset,
+  filters,
+  onFilterChange,
   totalResults,
 }: ProductFilterProps) {
-  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onFilterChange({ ...filters, search: e.target.value });
+  };
 
-  const hasActiveFilters =
-    Boolean(search) ||
-    selectedCategory !== "all" ||
-    statusFilter !== "all" ||
-    sortBy !== "newest";
+  const handleRankSelect = (rank: string) => {
+    onFilterChange({ ...filters, rank: rank === "Semua" ? undefined : rank });
+  };
+
+  const handlePricePreset = (min?: number, max?: number) => {
+    onFilterChange({ ...filters, minPrice: min, maxPrice: max });
+  };
+
+  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    onFilterChange({ ...filters, sortBy: e.target.value as any });
+  };
+
+  const handleStatusChange = (status: any) => {
+    onFilterChange({ ...filters, status });
+  };
+
+  const handleReset = () => {
+    onFilterChange({
+      search: "",
+      rank: undefined,
+      minPrice: undefined,
+      maxPrice: undefined,
+      minSkins: undefined,
+      minCollector: undefined,
+      status: "available",
+      sortBy: "newest",
+    });
+  };
 
   return (
-    <div className="space-y-4 mb-8">
-      {/* Top search & responsive toggle bar */}
-      <div className="flex flex-col md:flex-row items-center gap-3">
-        <div className="w-full flex-1">
-          <SearchBar value={search} onChange={onSearchChange} />
+    <div className="space-y-5 rounded-2xl bg-card border border-border p-4 sm:p-6 shadow-sm">
+      {/* Search Bar & Sort Dropdown */}
+      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Cari akun (Nama, Battle ID, Hero, Skin, Rank)..."
+            value={filters.search || ""}
+            onChange={handleSearch}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-background border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end">
-          {/* Mobile Filter Button */}
-          <Button
-            variant="outline"
-            className="md:hidden flex items-center gap-2 flex-1 sm:flex-none justify-center"
-            onClick={() => setMobileFilterOpen(!mobileFilterOpen)}
+        <div className="flex items-center gap-2 self-end md:self-auto">
+          <select
+            value={filters.sortBy || "newest"}
+            onChange={handleSortChange}
+            className="px-3.5 py-2.5 rounded-xl bg-background border border-border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
           >
-            <SlidersHorizontal className="h-4 w-4 text-slate-600" />
-            <span>Filter & Urutkan</span>
-            {hasActiveFilters && (
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            )}
-          </Button>
+            <option value="newest">🕒 Terbaru</option>
+            <option value="price_asc">💵 Harga Termurah</option>
+            <option value="price_desc">💎 Harga Termahal</option>
+            <option value="skins_desc">✨ Skin Terbanyak</option>
+            <option value="winrate_desc">🏆 Win Rate Tertinggi</option>
+          </select>
 
-          {/* Grid / List Switcher */}
-          <div className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
-            <button
-              onClick={() => onViewModeChange("grid")}
-              className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === "grid"
-                  ? "bg-slate-900 text-white shadow-xs"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
-              title="Grid View"
-              aria-label="Grid view"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => onViewModeChange("list")}
-              className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === "list"
-                  ? "bg-slate-900 text-white shadow-xs"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
-              title="List View"
-              aria-label="List view"
-            >
-              <List className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Category Pills (Desktop & Tablet) */}
-      <div className="hidden md:flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-        <button
-          onClick={() => onCategoryChange("all")}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-            selectedCategory === "all"
-              ? "bg-slate-900 text-white shadow-sm"
-              : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
-          }`}
-        >
-          Semua Kategori
-        </button>
-        {categories.map((cat) => (
           <button
-            key={cat.id}
-            onClick={() => onCategoryChange(cat.id)}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-              selectedCategory === cat.id
-                ? "bg-slate-900 text-white shadow-sm"
-                : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
-            }`}
+            onClick={handleReset}
+            title="Reset Filter"
+            className="p-2.5 rounded-xl bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
           >
-            {cat.name}
+            <RotateCcw className="w-4 h-4" />
           </button>
-        ))}
+        </div>
       </div>
 
-      {/* Filter Selects Bar (Desktop) */}
-      <div className="hidden md:flex items-center justify-between gap-4 pt-1">
-        <div className="flex items-center gap-3">
-          {/* Status Filter */}
-          <div className="w-44">
-            <Select
-              value={statusFilter}
-              onChange={(e) => onStatusChange(e.target.value)}
-              className="h-9 text-xs"
-            >
-              <option value="all">Semua Status</option>
-              <option value="available">Tersedia Saja</option>
-              <option value="out_of_stock">Stok Habis</option>
-            </Select>
-          </div>
-
-          {/* Sort By */}
-          <div className="w-48">
-            <Select
-              value={sortBy}
-              onChange={(e) => onSortChange(e.target.value)}
-              className="h-9 text-xs"
-            >
-              <option value="newest">Terbaru</option>
-              <option value="price_asc">Harga Terendah</option>
-              <option value="price_desc">Harga Tertinggi</option>
-              <option value="name_asc">Nama (A - Z)</option>
-            </Select>
-          </div>
-
-          {/* Reset button */}
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onReset}
-              className="text-xs text-slate-500 hover:text-red-600 gap-1.5 h-9 px-2"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>Reset</span>
-            </Button>
-          )}
-        </div>
-
-        <span className="text-xs text-slate-500">
-          Ditemukan <strong className="text-slate-900">{totalResults}</strong> produk
+      {/* Rank Badges Selector */}
+      <div className="space-y-2">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider font-mono">
+          Pilih Rank Akun
         </span>
+        <div className="flex flex-wrap gap-1.5">
+          {RANKS.map((r) => {
+            const isSelected = (!filters.rank && r === "Semua") || filters.rank === r;
+            return (
+              <button
+                key={r}
+                onClick={() => handleRankSelect(r)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  isSelected
+                    ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30"
+                    : "bg-secondary/70 text-muted-foreground hover:text-foreground hover:bg-secondary"
+                }`}
+              >
+                {r}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Mobile Collapsible Filter Drawer */}
-      {mobileFilterOpen && (
-        <div className="md:hidden rounded-2xl border border-slate-200 bg-white p-4 space-y-3.5 shadow-sm animate-in slide-in-from-top-2 duration-200">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Pilih Kategori
-            </label>
-            <Select
-              value={selectedCategory}
-              onChange={(e) => onCategoryChange(e.target.value)}
-              className="text-xs"
-            >
-              <option value="all">Semua Kategori</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Ketersediaan
-              </label>
-              <Select
-                value={statusFilter}
-                onChange={(e) => onStatusChange(e.target.value)}
-                className="text-xs"
-              >
-                <option value="all">Semua</option>
-                <option value="available">Tersedia</option>
-                <option value="out_of_stock">Stok Habis</option>
-              </Select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Urutkan
-              </label>
-              <Select
-                value={sortBy}
-                onChange={(e) => onSortChange(e.target.value)}
-                className="text-xs"
-              >
-                <option value="newest">Terbaru</option>
-                <option value="price_asc">Harga Terendah</option>
-                <option value="price_desc">Harga Tertinggi</option>
-                <option value="name_asc">Nama (A-Z)</option>
-              </Select>
-            </div>
-          </div>
-
-          <div className="pt-2 flex items-center justify-between border-t border-slate-100">
-            <span className="text-xs text-slate-500">
-              Total <strong>{totalResults}</strong> produk
-            </span>
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onReset}
-                className="text-xs text-red-600 gap-1"
-              >
-                <RotateCcw className="h-3 w-3" />
-                Reset Filter
-              </Button>
-            )}
+      {/* Price Presets & Status */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2 border-t border-border/60">
+        {/* Price Presets */}
+        <div className="space-y-1.5">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider font-mono">
+            Rentang Harga
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {PRICE_PRESETS.map((p, idx) => {
+              const active = filters.minPrice === p.min && filters.maxPrice === p.max;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => handlePricePreset(p.min, p.max)}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium border ${
+                    active
+                      ? "bg-emerald-950/60 text-emerald-300 border-emerald-600"
+                      : "bg-background text-muted-foreground border-border hover:border-border/80 hover:text-foreground"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
           </div>
         </div>
-      )}
+
+        {/* Min Skin Count */}
+        <div className="space-y-1.5">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider font-mono">
+            Minimal Skin
+          </span>
+          <div className="flex items-center gap-1.5">
+            {[0, 50, 100, 200].map((num) => (
+              <button
+                key={num}
+                onClick={() =>
+                  onFilterChange({ ...filters, minSkins: num === 0 ? undefined : num })
+                }
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium border ${
+                  (filters.minSkins === num) || (!filters.minSkins && num === 0)
+                    ? "bg-amber-950/60 text-amber-300 border-amber-600"
+                    : "bg-background text-muted-foreground border-border"
+                }`}
+              >
+                {num === 0 ? "Bebas" : `${num}+ Skin`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Collector Filter */}
+        <div className="space-y-1.5">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider font-mono">
+            Collector Skin
+          </span>
+          <div className="flex items-center gap-1.5">
+            {[0, 1, 5, 10].map((num) => (
+              <button
+                key={num}
+                onClick={() =>
+                  onFilterChange({ ...filters, minCollector: num === 0 ? undefined : num })
+                }
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium border ${
+                  (filters.minCollector === num) || (!filters.minCollector && num === 0)
+                    ? "bg-purple-950/60 text-purple-300 border-purple-600"
+                    : "bg-background text-muted-foreground border-border"
+                }`}
+              >
+                {num === 0 ? "Bebas" : `${num}+ Collector`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Status Filter */}
+        <div className="space-y-1.5">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider font-mono">
+            Status Akun
+          </span>
+          <div className="flex items-center gap-1.5">
+            {[
+              { id: "all", label: "Semua" },
+              { id: "available", label: "Tersedia" },
+              { id: "sold", label: "Terjual" },
+            ].map((st) => (
+              <button
+                key={st.id}
+                onClick={() => handleStatusChange(st.id)}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium border ${
+                  (filters.status === st.id) || (!filters.status && st.id === "available")
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-muted-foreground border-border"
+                }`}
+              >
+                {st.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Results Count Banner */}
+      <div className="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border/40 font-mono">
+        <span>Menampilkan {totalResults} akun Mobile Legends</span>
+        {filters.search && <span>Pencarian: &quot;{filters.search}&quot;</span>}
+      </div>
     </div>
   );
 }

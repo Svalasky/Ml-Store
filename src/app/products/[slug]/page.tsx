@@ -1,36 +1,42 @@
+import React from "react";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { MOCK_PRODUCTS } from "@/data/mock-products";
-import { Navbar } from "@/components/common/Navbar";
-import { Footer } from "@/components/common/Footer";
-import { ProductDetailClient } from "./ProductDetailClient";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
+import { ProductDetailView } from "@/components/products/ProductDetailView";
+import { getProductBySlug } from "@/services/productService";
 
-interface PageProps {
+interface Props {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const product = MOCK_PRODUCTS.find((p) => p.slug === slug);
+  const product = await getProductBySlug(slug);
 
   if (!product) {
     return {
-      title: "Produk Tidak Ditemukan",
-      description: "Halaman produk akun digital yang Anda cari tidak tersedia.",
+      title: "Akun Tidak Ditemukan | ML Account Store",
+      description: "Detail akun Mobile Legends yang dicari tidak ditemukan.",
     };
   }
 
+  const title = `Jual Akun Mobile Legends ${product.rank || "Mythic"} ${product.skin_count} Skin - ${product.name}`;
+  const description = `Jual akun Mobile Legends dengan ${product.skin_count} skin, ${product.collector_count || 0} Collector dan ${product.legend_count || 0} Legend. Win Rate ${product.win_rate || 50}%. Garansi anti hack-back.`;
+
   return {
-    title: `${product.name} | Beli via WhatsApp`,
-    description: product.description.slice(0, 160),
+    title,
+    description,
     openGraph: {
-      title: `${product.name} | Mole Store`,
-      description: product.description.slice(0, 160),
+      title,
+      description,
       images: [
         {
-          url: product.image,
+          url:
+            product.primary_image ||
+            "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800&auto=format&fit=crop",
           width: 800,
-          height: 600,
+          height: 500,
           alt: product.name,
         },
       ],
@@ -38,17 +44,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function ProductDetailPage({ params }: PageProps) {
+export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
+  const product = await getProductBySlug(slug);
+
+  if (!product) {
+    notFound();
+  }
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="min-h-screen flex flex-col bg-background text-foreground selection:bg-primary selection:text-primary-foreground">
       <Navbar />
-      <main className="flex-1 py-10 md:py-14">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <ProductDetailClient slug={slug} />
-        </div>
+
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <ProductDetailView product={product} />
       </main>
+
       <Footer />
     </div>
   );

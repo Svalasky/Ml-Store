@@ -1,60 +1,50 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Fira_Sans, Fira_Code } from "next/font/google";
 import "./globals.css";
-import { StoreProvider } from "@/context/StoreContext";
-import { AuthProvider } from "@/context/AuthContext";
-import { Toaster } from "sonner";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { SmoothScrollProvider } from "@/components/providers/SmoothScrollProvider";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { env } from "@/config/env";
 
-const inter = Inter({
+const firaSans = Fira_Sans({
+  variable: "--font-fira-sans",
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-inter",
+});
+
+const firaCode = Fira_Code({
+  variable: "--font-fira-code",
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  display: "swap",
 });
 
 export const viewport: Viewport = {
-  themeColor: "#0f172a",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
 };
 
 export const metadata: Metadata = {
-  title: {
-    default: "Mole Store | Pusat Akun Digital Legal, Murah & Bergaransi",
-    template: "%s | Mole Store",
-  },
+  title: "Jual Akun Mobile Legends | ML Account Store Terpercaya",
   description:
-    "Beli akun digital premium resmi: Netflix, Spotify, YouTube Premium, ChatGPT Plus, Canva Pro, VPN, software dan game dengan garansi replace penuh langsung via WhatsApp.",
+    "Marketplace akun Mobile Legends terpercaya No. 1 di Indonesia. Menjual akun MLBB Sultan, Collector, Legend, Mythic Glory & Immortal dengan garansi 100% Anti Hack-Back.",
+  applicationName: "ML Account Store",
   keywords: [
-    "akun digital",
-    "beli netflix premium",
-    "spotify premium murah",
-    "chatgpt plus indonesia",
-    "jual akun digital legal",
-    "toko akun digital whatsapp",
-    "canva pro",
+    "Jual Akun Mobile Legends",
+    "Beli Akun MLBB",
+    "Akun Sultan ML",
+    "Collector Skin MLBB",
+    "Akun Mythic Glory",
+    "Akun Mythical Immortal",
+    "Marketplace Akun Mobile Legends",
   ],
-  authors: [{ name: "Mole Store Team" }],
-  creator: "Mole Store",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"),
-  openGraph: {
-    type: "website",
-    locale: "id_ID",
-    url: "/",
-    title: "Mole Store | Akun Digital Legal & Bergaransi",
-    description:
-      "Katalog akun digital resmi harga terjangkau dengan pemrosesan instan 1-5 menit via WhatsApp.",
-    siteName: "Mole Store",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Mole Store | Akun Digital Legal & Bergaransi",
-    description: "Katalog akun digital resmi langsung order via WhatsApp.",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
+  authors: [{ name: "ML Account Store" }],
 };
 
 export default function RootLayout({
@@ -63,14 +53,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className={`${inter.variable} scroll-smooth`}>
-      <body className="min-h-screen font-sans bg-slate-50 text-slate-900 selection:bg-emerald-500 selection:text-white">
-        <StoreProvider>
-          <AuthProvider>
-            {children}
-            <Toaster position="top-right" richColors closeButton />
-          </AuthProvider>
-        </StoreProvider>
+    <html
+      lang="id"
+      suppressHydrationWarning
+      className={`${firaSans.variable} ${firaCode.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <SmoothScrollProvider>
+            <TooltipProvider>
+              {children}
+            </TooltipProvider>
+          </SmoothScrollProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

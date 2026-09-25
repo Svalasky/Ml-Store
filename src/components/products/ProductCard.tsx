@@ -4,172 +4,154 @@ import React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Product } from "@/types/product";
-import { useStore } from "@/context/StoreContext";
-import { PriceDisplay } from "@/components/common/PriceDisplay";
-import { StockBadge } from "@/components/common/StockBadge";
-import { WhatsAppButton } from "@/components/common/WhatsAppButton";
-import { Button } from "@/components/ui/button";
-import { Clock, Eye, Sparkles } from "lucide-react";
+import { formatIDR } from "@/lib/whatsapp";
+import { Sparkles, Trophy, Crown, ArrowRight, Flame } from "lucide-react";
 
 interface ProductCardProps {
   product: Product;
-  viewMode?: "grid" | "list";
 }
 
-export function ProductCard({ product, viewMode = "grid" }: ProductCardProps) {
-  const { getCategoryById } = useStore();
-  const category = getCategoryById(product.categoryId);
+export function ProductCard({ product }: ProductCardProps) {
+  const isSold = product.status === "sold";
+  const isReserved = product.status === "reserved";
+  const isAvailable = product.status === "available";
 
-  if (viewMode === "list") {
-    return (
-      <div className="group relative flex flex-col md:flex-row items-center gap-5 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm hover:shadow-md transition-all duration-300 hover:border-slate-300">
-        {/* Thumbnail Image */}
-        <div className="relative h-44 w-full md:w-56 shrink-0 overflow-hidden rounded-xl bg-slate-100">
-          <Image
-            src={product.image}
-            alt={product.name}
-            fill
-            sizes="(max-width: 768px) 100vw, 224px"
-            className="object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-          {product.featured && (
-            <div className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-full bg-slate-900/90 backdrop-blur-sm px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm">
-              <Sparkles className="h-3 w-3 text-emerald-400" />
-              <span>Unggulan</span>
-            </div>
-          )}
-          <div className="absolute top-2.5 right-2.5">
-            <StockBadge status={product.status} showIcon={false} />
-          </div>
-        </div>
+  const getRankBadgeClass = (rank?: string) => {
+    if (!rank) return "bg-zinc-800 text-zinc-300 border-zinc-700";
+    const r = rank.toLowerCase();
+    if (r.includes("immortal")) return "bg-red-950/80 text-red-300 border-red-700/60 shadow-sm shadow-red-900/50";
+    if (r.includes("glory")) return "bg-amber-950/80 text-amber-300 border-amber-600/60 shadow-sm shadow-amber-900/50";
+    if (r.includes("honor")) return "bg-yellow-950/80 text-yellow-300 border-yellow-600/60";
+    if (r.includes("mythic")) return "bg-purple-950/80 text-purple-300 border-purple-600/60";
+    if (r.includes("legend")) return "bg-orange-950/80 text-orange-300 border-orange-600/60";
+    if (r.includes("epic")) return "bg-blue-950/80 text-blue-300 border-blue-600/60";
+    return "bg-zinc-800 text-zinc-300 border-zinc-700";
+  };
 
-        {/* Content */}
-        <div className="flex flex-1 flex-col justify-between w-full h-full py-1">
-          <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                {category?.name || "Digital Account"}
-              </span>
-              {product.duration && (
-                <span className="flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                  <Clock className="h-3 w-3 text-slate-400" />
-                  {product.duration}
-                </span>
-              )}
-            </div>
-
-            <Link href={`/products/${product.slug}`}>
-              <h3 className="text-lg font-bold text-slate-900 group-hover:text-emerald-600 transition-colors line-clamp-1">
-                {product.name}
-              </h3>
-            </Link>
-
-            <p className="mt-1 text-sm text-slate-500 line-clamp-2 leading-relaxed">
-              {product.description}
-            </p>
-          </div>
-
-          <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
-            <PriceDisplay price={product.price} originalPrice={product.originalPrice} size="lg" />
-
-            <div className="flex items-center gap-2">
-              <Link href={`/products/${product.slug}`} className="w-full sm:w-auto">
-                <Button variant="outline" size="sm" className="w-full sm:w-auto gap-1.5">
-                  <Eye className="h-4 w-4" />
-                  <span>Detail</span>
-                </Button>
-              </Link>
-              <WhatsAppButton
-                product={product}
-                size="sm"
-                className="w-full sm:w-auto"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const imageSrc =
+    product.primary_image ||
+    product.images?.[0]?.image_url ||
+    "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800&auto=format&fit=crop";
 
   return (
-    <div className="group relative flex flex-col rounded-2xl border border-slate-200/80 bg-white p-3.5 sm:p-4 shadow-sm hover:shadow-lg transition-all duration-300 hover:border-slate-300 hover:-translate-y-1">
-      {/* Thumbnail */}
-      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-xl bg-slate-100">
-        <Image
-          src={product.image}
+    <div className="group relative rounded-2xl bg-card border border-border/80 hover:border-primary/50 transition-all duration-300 overflow-hidden flex flex-col hover:shadow-xl hover:shadow-purple-900/10 hover:-translate-y-1">
+      {/* Image Thumbnail & Overlays */}
+      <div className="relative aspect-[16/10] w-full overflow-hidden bg-zinc-900">
+        <img
+          src={imageSrc}
           alt={product.name}
-          fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-          className="object-cover group-hover:scale-105 transition-transform duration-500"
+          className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+            isSold ? "grayscale opacity-60" : ""
+          }`}
+          loading="lazy"
         />
+        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent" />
 
-        {/* Featured badge */}
-        {product.featured && (
-          <div className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-full bg-slate-950/85 backdrop-blur-sm px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-sm">
-            <Sparkles className="h-3 w-3 text-emerald-400" />
-            <span>Unggulan</span>
-          </div>
-        )}
+        {/* Top Badges */}
+        <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 z-10">
+          <span
+            className={`px-2.5 py-1 rounded-full text-xs font-bold border backdrop-blur-md flex items-center gap-1 ${getRankBadgeClass(
+              product.rank
+            )}`}
+          >
+            <Trophy className="w-3.5 h-3.5" />
+            {product.rank || "Mythic"}
+          </span>
 
-        <div className="absolute top-2.5 right-2.5">
-          <StockBadge status={product.status} showIcon={false} />
+          {product.featured && !isSold && (
+            <span className="px-2 py-1 rounded-full text-[11px] font-bold bg-amber-500 text-zinc-950 flex items-center gap-1 shadow-md shadow-amber-500/30">
+              <Flame className="w-3 h-3 fill-zinc-950" />
+              HOT
+            </span>
+          )}
+        </div>
+
+        {/* Status Badge */}
+        <div className="absolute top-3 right-3 z-10">
+          {isSold ? (
+            <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-red-600 text-white shadow-md">
+              SOLD OUT
+            </span>
+          ) : isReserved ? (
+            <span className="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-600 text-white shadow-md">
+              RESERVED
+            </span>
+          ) : (
+            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-600/60 backdrop-blur-md">
+              Tersedia
+            </span>
+          )}
+        </div>
+
+        {/* Level and Win Rate pill at bottom of image */}
+        <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between text-xs text-zinc-300 font-mono">
+          <span className="px-2 py-0.5 rounded bg-zinc-900/80 backdrop-blur-sm border border-zinc-800">
+            Lv. {product.level || 30}
+          </span>
+          {product.win_rate && (
+            <span className="px-2 py-0.5 rounded bg-zinc-900/80 backdrop-blur-sm border border-zinc-800 text-emerald-400 font-semibold">
+              WR {product.win_rate}%
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Info Body */}
-      <div className="mt-3.5 flex flex-1 flex-col justify-between">
+      {/* Account Info Content */}
+      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-4">
         <div>
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
-            <span className="font-semibold uppercase tracking-wider text-emerald-700 truncate max-w-[150px]">
-              {category?.name || "Akun Digital"}
-            </span>
-            {product.duration && (
-              <span className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-md text-[11px] font-medium text-slate-600">
-                <Clock className="h-3 w-3 text-slate-400" />
-                {product.duration}
-              </span>
-            )}
-          </div>
-
-          <Link href={`/products/${product.slug}`} className="block">
-            <h3 className="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors line-clamp-1 leading-snug">
+          {/* Title */}
+          <Link href={`/products/${product.slug}`}>
+            <h3 className="font-bold text-base text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-snug">
               {product.name}
             </h3>
           </Link>
 
-          <p className="mt-1.5 text-xs text-slate-500 line-clamp-2 leading-relaxed">
-            {product.description}
-          </p>
+          {/* Key Stats Pill Row: Skins • Collector • Legend */}
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+            <span className="px-2.5 py-1 rounded-lg bg-secondary text-secondary-foreground font-semibold flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              {product.skin_count} Skins
+            </span>
+
+            {product.collector_count > 0 && (
+              <span className="px-2.5 py-1 rounded-lg bg-amber-950/50 text-amber-300 border border-amber-800/40 font-semibold flex items-center gap-1">
+                <Crown className="w-3.5 h-3.5 text-amber-400" />
+                {product.collector_count} Collector
+              </span>
+            )}
+
+            {product.legend_count > 0 && (
+              <span className="px-2.5 py-1 rounded-lg bg-purple-950/50 text-purple-300 border border-purple-800/40 font-semibold">
+                {product.legend_count} Legend
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Price & Action Buttons */}
-        <div className="mt-4 pt-3 border-t border-slate-100">
-          <div className="mb-3">
-            <PriceDisplay
-              price={product.price}
-              originalPrice={product.originalPrice}
-              size="default"
-            />
+        {/* Pricing & CTA */}
+        <div className="pt-3 border-t border-border/70 flex items-center justify-between gap-2">
+          <div className="flex flex-col">
+            {product.original_price && product.original_price > product.price && (
+              <span className="text-[11px] text-muted-foreground line-through">
+                {formatIDR(product.original_price)}
+              </span>
+            )}
+            <span className="text-lg font-black tracking-tight text-emerald-400">
+              {formatIDR(product.price)}
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <Link href={`/products/${product.slug}`}>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full rounded-xl text-xs font-semibold hover:bg-slate-50"
-              >
-                Detail
-              </Button>
-            </Link>
-
-            <WhatsAppButton
-              product={product}
-              size="sm"
-              showIcon={false}
-              className="w-full rounded-xl text-xs"
-            />
-          </div>
+          <Link
+            href={`/products/${product.slug}`}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+              isSold
+                ? "bg-secondary text-muted-foreground cursor-not-allowed"
+                : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20 hover:gap-2"
+            }`}
+          >
+            <span>Detail Akun</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
       </div>
     </div>
