@@ -1,0 +1,60 @@
+import { Category } from "@/types/category";
+
+export const MOCK_CATEGORIES: Category[] = [
+  {
+    id: "cat-streaming",
+    name: "Streaming & Movies",
+    slug: "streaming",
+    description: "Akun langganan film dan series legal dengan kualitas Ultra HD 4K",
+    icon: "Tv",
+    active: true,
+  },
+  {
+    id: "cat-music",
+    name: "Music & Audio",
+    slug: "music",
+    description: "Mendengarkan musik favorit tanpa iklan dan offline mode bebas hambatan",
+    icon: "Headphones",
+    active: true,
+  },
+  {
+    id: "cat-ai",
+    name: "AI & Productivity",
+    slug: "ai-productivity",
+    description: "Tools kecerdasan buatan dan optimasi kerja untuk efisiensi maksimal",
+    icon: "Sparkles",
+    active: true,
+  },
+  {
+    id: "cat-design",
+    name: "Design & Creative",
+    slug: "design-creative",
+    description: "Software desain grafis, editing foto & video profesional",
+    icon: "Palette",
+    active: true,
+  },
+  {
+    id: "cat-vpn",
+    name: "VPN & Security",
+    slug: "vpn-security",
+    description: "Keamanan browsing dan akses jaringan global tanpa batas",
+    icon: "ShieldCheck",
+    active: true,
+  },
+  {
+    id: "cat-gaming",
+    name: "Gaming & Entertainment",
+    slug: "gaming",
+    description: "Akun game premium, topup voucher, dan subscription gaming",
+    icon: "Gamepad2",
+    active: true,
+  },
+  {
+    id: "cat-software",
+    name: "Software & OS",
+    slug: "software-os",
+    description: "Lisensi sistem operasi resmi dan paket software kantor",
+    icon: "Laptop",
+    active: true,
+  },
+];
